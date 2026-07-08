@@ -263,5 +263,3 @@ git push origin main
 | Sync fork | `git pull upstream main` |
 
 ---
-
-This setup makes it easy for **students, researchers, and volunteer devs** to contribute without fear of breaking the main project. You're building not just an AI, but a **community** – and that's exactly what will make YorùbáGPT unstoppable.
