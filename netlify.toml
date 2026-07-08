@@ -1,0 +1,42 @@
+[build]
+  command   = "npm run build"
+  publish   = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[dev]
+  command    = "npm run dev"
+  port       = 5173
+  targetPort = 5173
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy   = "default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://ui-avatars.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://us-central1-gen-lang-client-0861985618.cloudfunctions.net https://checkout.stripe.com https://api.flutterwave.com; frame-src https://checkout.stripe.com https://js.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+    X-Frame-Options           = "DENY"
+    X-Content-Type-Options    = "nosniff"
+    X-XSS-Protection          = "1; mode=block"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Permissions-Policy        = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+[[redirects]]
+  from   = "/payment/success"
+  to     = "/index.html?payment=success"
+  status = 302
+
+[[redirects]]
+  from   = "/payment/cancel"
+  to     = "/pricing.html?payment=cancel"
+  status = 302

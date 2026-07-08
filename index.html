@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="yo">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="YorùbáGPT — ẹ̀rọ ìbánisọ̀rọ̀ AI ní èdè Yorùbá." />
+  <meta name="theme-color" content="#0a1f14" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="YorùbáGPT — AI ní èdè Yorùbá" />
+  <meta property="og:description" content="Ẹ̀rọ ìbánisọ̀rọ̀ AI tí ó mọ̀ èdè Yorùbá, àṣà, àti ìtàn." />
+  <meta property="og:type" content="website" />
+  <title>YorùbáGPT — Ẹ̀rọ Ìbánisọ̀rọ̀ AI ní èdè Yorùbá</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     AUTH GATE
+═══════════════════════════════════════════════════════════════ -->
+<div id="auth-gate" role="dialog" aria-modal="true" aria-label="Wọlé sínú YorùbáGPT">
+
+  <div class="auth-loading-overlay" aria-live="polite" aria-busy="true">
+    <div class="auth-loading-spinner" role="progressbar" aria-label="Ń ṣejúṣeṣe…"></div>
+    <p class="auth-loading-text">Ń ṣejúṣeṣe YorùbáGPT…</p>
+  </div>
+
+  <!-- Login -->
+  <div id="view-login" class="auth-view active" role="main">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="auth-brand-icon" aria-hidden="true">🌍</span>
+        <span class="auth-brand-name">YorùbáGPT</span>
+        <span class="auth-brand-badge">Beta</span>
+      </div>
+      <h1 class="auth-heading">Ẹ kú àbọ̀</h1>
+      <p class="auth-subheading">Wọlé láti bẹ̀rẹ̀ ìbánisọ̀rọ̀ rẹ</p>
+
+      <div class="social-buttons">
+        <button id="google-signin-btn" class="social-btn" type="button" aria-label="Wọlé pẹ̀lú Google">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Wọlé pẹ̀lú Google
+        </button>
+        <button id="github-signin-btn" class="social-btn" type="button" aria-label="Wọlé pẹ̀lú GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="18" height="18">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          Wọlé pẹ̀lú GitHub
+        </button>
+      </div>
+
+      <div class="auth-divider" role="separator"><span>tàbí</span></div>
+
+      <form id="login-form" novalidate>
+        <div class="form-field">
+          <label for="login-email">Àdírẹ́sì ìmẹ̀lẹ̀</label>
+          <input id="login-email" type="email" placeholder="orukọ@apeere.com" autocomplete="email" required />
+        </div>
+        <div class="form-field">
+          <label for="login-password">Ọ̀rọ̀ àṣírí</label>
+          <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <div id="login-error" class="auth-error" role="alert" aria-live="assertive"></div>
+        <button id="login-btn" class="auth-submit-btn" type="submit">Wọlé</button>
+      </form>
+
+      <p class="auth-switch">Kò tíì ní àkáǹtì? <a href="#" id="go-signup" role="button">Ṣẹ̀dá àkáǹtì</a></p>
+    </div>
+  </div>
+
+  <!-- Sign-up -->
+  <div id="view-signup" class="auth-view" role="main">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="auth-brand-icon" aria-hidden="true">🌍</span>
+        <span class="auth-brand-name">YorùbáGPT</span>
+        <span class="auth-brand-badge">Beta</span>
+      </div>
+      <h1 class="auth-heading">Ṣẹ̀dá àkáǹtì</h1>
+      <p class="auth-subheading">Bẹ̀rẹ̀ ìbánisọ̀rọ̀ rẹ lónìí</p>
+
+      <div class="social-buttons">
+        <button id="google-signup-btn" class="social-btn" type="button" aria-label="Forúkọsílẹ̀ pẹ̀lú Google">
+          <svg viewBox="0 0 24 24" aria-hidden="true" width="18" height="18">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Forúkọsílẹ̀ pẹ̀lú Google
+        </button>
+        <button id="github-signup-btn" class="social-btn" type="button" aria-label="Forúkọsílẹ̀ pẹ̀lú GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" width="18" height="18">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          Forúkọsílẹ̀ pẹ̀lú GitHub
+        </button>
+      </div>
+
+      <div class="auth-divider" role="separator"><span>tàbí</span></div>
+
+      <form id="signup-form" novalidate>
+        <div class="form-field">
+          <label for="signup-name">Orúkọ rẹ</label>
+          <input id="signup-name" type="text" placeholder="Adéyẹmí Tèmítọ́pẹ́" autocomplete="name" required />
+        </div>
+        <div class="form-field">
+          <label for="signup-email">Àdírẹ́sì ìmẹ̀lẹ̀</label>
+          <input id="signup-email" type="email" placeholder="orukọ@apeere.com" autocomplete="email" required />
+        </div>
+        <div class="form-field">
+          <label for="signup-password">Ọ̀rọ̀ àṣírí <span class="field-hint">(8+ ìwé)</span></label>
+          <input id="signup-password" type="password" placeholder="••••••••" autocomplete="new-password" minlength="8" required />
+        </div>
+        <div id="signup-error" class="auth-error" role="alert" aria-live="assertive"></div>
+        <button id="signup-btn" class="auth-submit-btn" type="submit">Ṣẹ̀dá àkáǹtì</button>
+      </form>
+
+      <p class="auth-switch">Ní àkáǹtì tẹ́lẹ̀? <a href="#" id="go-login" role="button">Wọlé</a></p>
+    </div>
+  </div>
+
+  <!-- Email verification -->
+  <div id="view-verify" class="auth-view" role="main">
+    <div class="auth-card verify-card">
+      <div class="verify-icon" aria-hidden="true">📧</div>
+      <h1 class="auth-heading">Ṣàyẹ̀wò ìmẹ̀lẹ̀ rẹ</h1>
+      <p class="verify-body">A ti rànsẹ́ ìjẹ́rìísí sí <strong id="verify-email-display"></strong>.</p>
+      <p class="verify-hint">Kò sí nínú àpộộpọ̀? Ṣàyẹ̀wò fọ́ldà spam rẹ.</p>
+      <div id="verify-error" class="auth-error" role="alert" aria-live="assertive"></div>
+      <div class="verify-actions">
+        <button id="check-verify-btn" class="auth-submit-btn" type="button">Mo ti ṣàyẹ̀wò ìmẹ̀lẹ̀</button>
+        <button id="resend-verify-btn" class="auth-secondary-btn" type="button">Tún Ìmẹ̀lẹ̀ Ránsẹ́</button>
+        <button id="verify-signout-btn" class="auth-ghost-btn" type="button">Jáde</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#auth-gate -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP ROOT
+═══════════════════════════════════════════════════════════════ -->
+<div id="app-root" hidden>
+
+  <!-- Sessions sidebar -->
+  <aside id="sessions-sidebar" class="sessions-sidebar" aria-label="Àkójọ ìbánisọ̀rọ̀">
+    <div class="sidebar-header">
+      <h2 class="sidebar-title">Ìbánisọ̀rọ̀</h2>
+      <button id="new-session-btn" class="new-session-btn" type="button" aria-label="Bẹ̀rẹ̀ ìbánisọ̀rọ̀ tuntun">
+        <span aria-hidden="true">＋</span> Tuntun
+      </button>
+    </div>
+    <div id="session-list" class="session-list" role="list" aria-label="Àwọn ìbánisọ̀rọ̀ tẹ́lẹ̀"></div>
+    <div id="sidebar-upgrade-cta" class="sidebar-upgrade">
+      <p class="sidebar-upgrade-text">Gba ìwọle àìlópin</p>
+      <a href="/pricing.html" class="sidebar-upgrade-btn">✦ Gba Premium</a>
+    </div>
+  </aside>
+
+  <div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
+
+  <!-- Main chat -->
+  <main class="chat-main" role="main">
+
+    <header class="chat-header" role="banner">
+      <div class="header-left">
+        <button id="sidebar-toggle" class="icon-btn sidebar-toggle" type="button"
+                aria-label="Ṣí àtòkọ ìbánisọ̀rọ̀" aria-expanded="false" aria-controls="sessions-sidebar">
+          <span class="hamburger" aria-hidden="true">☰</span>
+        </button>
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true">🌍</span>
+          <span class="brand-name">YorùbáGPT</span>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <span id="current-session-title" class="session-title-display" aria-live="polite">Ìbánisọ̀rọ̀</span>
+      </div>
+
+      <div class="header-right">
+        <button id="upgrade-btn" class="upgrade-header-btn" type="button" aria-label="Gba Premium">✦ Premium</button>
+
+        <div class="status-bar" role="status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="status-text" class="status-text">Ìmúra</span>
+        </div>
+
+        <div class="user-menu-wrapper">
+          <button id="user-menu-btn" class="user-menu-btn" type="button"
+                  aria-label="Àkáǹtì olùmúlò" aria-haspopup="true" aria-expanded="false" aria-controls="user-dropdown">
+            <img id="user-avatar" class="user-avatar" src="" alt="" width="32" height="32" />
+          </button>
+          <div id="user-dropdown" class="user-dropdown" hidden role="menu">
+            <div class="dropdown-header">
+              <span id="user-name" class="dropdown-name"></span>
+              <span id="user-email-display" class="dropdown-email"></span>
+              <span id="user-plan-badge" class="plan-badge">Ọfẹ̀</span>
+            </div>
+            <hr class="dropdown-divider" />
+            <a href="/pricing.html" class="dropdown-item" role="menuitem">✦ Gba Premium</a>
+            <hr class="dropdown-divider" />
+            <button id="signout-btn" class="dropdown-item danger" type="button" role="menuitem">🚪 Jáde</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="chat-messages" class="chat-messages"
+             role="log" aria-label="Àwọn ìbánisọ̀rọ̀" aria-live="polite" aria-relevant="additions"></section>
+
+    <div class="suggestions-bar">
+      <button id="suggestions-toggle" class="suggestions-toggle" type="button"
+              aria-expanded="false" aria-controls="suggestion-list">💡 Àwọn ìmọ̀ràn</button>
+      <div id="suggestion-list" class="suggestion-list" hidden>
+        <button class="suggestion-chip" type="button" data-prompt="Kí ni àṣà ìbọriṣà Yorùbá?">Àṣà ìbọriṣà</button>
+        <button class="suggestion-chip" type="button" data-prompt="Ṣe àlàyé ọ̀rọ̀ 'Àṣà' fún mi ní Yorùbá àti Gẹ̀ẹ́sì">Àlàyé ọ̀rọ̀</button>
+        <button class="suggestion-chip" type="button" data-prompt="Kọ owe Yorùbá kan pẹ̀lú ìtumọ̀ rẹ">Owe Yorùbá</button>
+        <button class="suggestion-chip" type="button" data-prompt="Báwo ni a ṣe ń kọ ọ̀rọ̀ àfọkànpọn ní Yorùbá?">Girama Yorùbá</button>
+        <button class="suggestion-chip" type="button" data-prompt="Tọ̀jú ìtàn Ìjọba Ọ̀yọ́ fún mi">Ìtàn Yorùbá</button>
+        <button class="suggestion-chip" type="button" data-prompt="Kí ni ìtumọ̀ 'Ẹni tó bá sun oorun tí kò jẹun, àìsun ni í sùn'?">Owe olókìkí</button>
+      </div>
+    </div>
+
+    <footer class="chat-footer" role="contentinfo">
+      <form id="chat-form" class="chat-form" novalidate>
+        <div class="input-wrapper">
+          <textarea id="user-input" class="user-input"
+            placeholder="Kọ ìbéèrè rẹ sínú àpótí yìí… (Shift+Enter fún ìlà tuntun)"
+            rows="1" maxlength="2000" autocomplete="off" spellcheck="true" lang="yo"
+            aria-label="Ìbéèrè rẹ" aria-describedby="char-count-label"></textarea>
+          <div class="input-controls">
+            <span class="char-counter" id="char-count-label" aria-live="off">
+              <span id="char-count">0</span>/2000
+            </span>
+            <button id="clear-button" class="icon-btn clear-btn" type="button"
+                    aria-label="Nu ìbánisọ̀rọ̀" title="Nu">🗑️</button>
+            <button id="send-button" class="send-btn" type="submit" aria-label="Fífiranṣẹ" title="Enter">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   aria-hidden="true" width="15" height="15">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </form>
+      <p class="footer-note">YorùbáGPT lè ṣe àṣìṣe. Ṣàyẹ̀wò àwọn ìdáhùn pàtàkì.</p>
+    </footer>
+
+  </main>
+</div><!-- /#app-root -->
+
+<script type="module" src="/src/auth.js"></script>
+</body>
+</html>

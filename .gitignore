@@ -1,0 +1,36 @@
+# Secrets
+.env
+.env.local
+.env.production
+.env.*.local
+functions/.env
+functions/.env.local
+functions/.secret.local
+*.pem
+*.key
+serviceAccountKey.json
+
+# Build outputs
+dist/
+functions/lib/
+
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+functions-debug.log
+ui-debug.log
+emulator-data/
+
+# IDE / OS
+.DS_Store
+.vscode/settings.json
+*.swp
+Thumbs.db
+
+# Coverage
+coverage/
