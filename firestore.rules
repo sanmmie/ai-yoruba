@@ -41,9 +41,9 @@ service cloud.firestore {
       }
     }
 
+    // Global deny – catches everything not matched above
     match /{document=**} {
       allow read, write: if false;
     }
   }
 }
-// End of file - all braces are properly closed
