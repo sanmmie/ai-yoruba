@@ -25,6 +25,28 @@ exports.createUserProfile = functions.auth.user().onCreate(async (user) => {
   };
 
   // Save to Firestore
+
+  // 🔥 TRIGGER: When a new user signs up, create their Firestore profile
+exports.createUserProfile = functions.auth.user().onCreate(async (user) => {
+  const userId = user.uid;
+  const userData = {
+    email: user.email || '',
+    displayName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+    photoURL: user.photoURL || null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    usage: {
+      promptsUsed: 0,
+      lastResetDate: new Date().toISOString().split('T')[0]
+    },
+    subscription: {
+      plan: 'free',
+      status: 'active'
+    }
+  };
+
+  await admin.firestore().collection('users').doc(userId).set(userData);
+  console.log(`✅ User profile created for ${user.email} (UID: ${userId}) with FREE plan.`);
+});
   await admin.firestore().collection('users').doc(userId).set(userData);
   console.log(`✅ User profile created for ${user.email} (UID: ${userId}) with FREE plan.`);
 });
