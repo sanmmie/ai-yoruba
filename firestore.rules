@@ -1,7 +1,3 @@
-// firestore.rules — YorùbáGPT v2
-// Default-deny. Users own only their documents.
-// Payment fields are write-protected from clients — Admin SDK (Cloud Functions) only.
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -16,34 +12,32 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-  // READ: Users can only read their own data
-  allow read: if isOwner(userId);
-  
-  // CREATE: BLOCKED — users are created server-side by Cloud Functions
-  allow create: if false;
-  
-  // UPDATE: Users can update their own data, but CANNOT touch payment fields
-  allow update: if isOwner(userId) && noPaymentFieldsWritten();
-  
-  // DELETE: Never allow users to delete their own account from client
-  allow delete: if false;
+      allow read:   if isOwner(userId);
+      allow create: if false;
+      allow update: if isOwner(userId) && noPaymentFieldsWritten();
+      allow delete: if false;
 
-  // --- SESSIONS (Sub-collection) ---
-  match /sessions/{sessionId} {
-    allow read:   if isOwner(userId);
-    allow create: if isOwner(userId)
-                  && request.resource.data.keys().hasAll(['title','history','draft','createdAt','updatedAt'])
-                  && request.resource.data.title is string
-                  && request.resource.data.title.size() <= 200
-                  && request.resource.data.history is list
-                  && request.resource.data.history.size() <= 100
-                  && request.resource.data.draft is string;
-    allow update: if isOwner(userId)
-                  && request.resource.data.title is string
-                  && request.resource.data.title.size() <= 200
-                  && request.resource.data.history is list
-                  && request.resource.data.history.size() <= 100
-                  && request.resource.data.draft is string;
-    allow delete: if isOwner(userId);
+      match /sessions/{sessionId} {
+        allow read:   if isOwner(userId);
+        allow create: if isOwner(userId)
+                      && request.resource.data.keys().hasAll(['title','history','draft','createdAt','updatedAt'])
+                      && request.resource.data.title is string
+                      && request.resource.data.title.size() <= 200
+                      && request.resource.data.history is list
+                      && request.resource.data.history.size() <= 100
+                      && request.resource.data.draft is string;
+        allow update: if isOwner(userId)
+                      && request.resource.data.title is string
+                      && request.resource.data.title.size() <= 200
+                      && request.resource.data.history is list
+                      && request.resource.data.history.size() <= 100
+                      && request.resource.data.draft is string;
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
