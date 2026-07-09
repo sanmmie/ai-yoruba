@@ -1,10 +1,3 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "sessions",
-      "queryScope": "COLLECTION",
-      "fields": [{ "fieldPath": "updatedAt", "order": "DESCENDING" }]
-    }
-  ],
-  "fieldOverrides": []
+  "indexes": []
 }
