@@ -2,36 +2,41 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuthed()       { return request.auth != null; }
-    function isOwner(userId)  { return isAuthed() && request.auth.uid == userId; }
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthed() && request.auth.uid == userId;
+    }
 
     function noPaymentFieldsWritten() {
-      let changed   = request.resource.data.diff(resource.data).affectedKeys();
-      let forbidden = ['stripeCustomerId','flutterwaveCustomerId','subscriptionId','currentPeriodEnd','provider'];
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let forbidden = ['stripeCustomerId', 'flutterwaveCustomerId', 'subscriptionId', 'currentPeriodEnd', 'provider'];
       return !changed.hasAny(forbidden);
     }
 
     match /users/{userId} {
-      allow read:   if isOwner(userId);
+      allow read: if isOwner(userId);
       allow create: if false;
       allow update: if isOwner(userId) && noPaymentFieldsWritten();
       allow delete: if false;
 
       match /sessions/{sessionId} {
-        allow read:   if isOwner(userId);
+        allow read: if isOwner(userId);
         allow create: if isOwner(userId)
-                      && request.resource.data.keys().hasAll(['title','history','draft','createdAt','updatedAt'])
-                      && request.resource.data.title is string
-                      && request.resource.data.title.size() <= 200
-                      && request.resource.data.history is list
-                      && request.resource.data.history.size() <= 100
-                      && request.resource.data.draft is string;
+          && request.resource.data.keys().hasAll(['title', 'history', 'draft', 'createdAt', 'updatedAt'])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 200
+          && request.resource.data.history is list
+          && request.resource.data.history.size() <= 100
+          && request.resource.data.draft is string;
         allow update: if isOwner(userId)
-                      && request.resource.data.title is string
-                      && request.resource.data.title.size() <= 200
-                      && request.resource.data.history is list
-                      && request.resource.data.history.size() <= 100
-                      && request.resource.data.draft is string;
+          && request.resource.data.title is string
+          && request.resource.data.title.size() <= 200
+          && request.resource.data.history is list
+          && request.resource.data.history.size() <= 100
+          && request.resource.data.draft is string;
         allow delete: if isOwner(userId);
       }
     }
@@ -41,3 +46,4 @@ service cloud.firestore {
     }
   }
 }
+// End of file - all braces are properly closed
