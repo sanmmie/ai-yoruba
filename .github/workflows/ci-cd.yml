@@ -87,7 +87,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '${{ env.NODE_VERSION }}' }
-      - run: npm ci  # Install dependencies for the root (if any) – not strictly needed for Firestore rules, but safe
+      - run: npm ci  # Install dependencies for the root (if any)
 
       # Deploy Firestore rules and indexes using the Firebase action
       - name: Deploy Firestore rules + indexes
