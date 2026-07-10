@@ -91,7 +91,7 @@ async function callAnthropic(history, userMessage) {
     method: 'POST',
     headers: { 'Content-Type':'application/json', 'x-api-key': apiKey, 'anthropic-version':'2023-06-01' },
     body: JSON.stringify({
-      model:      'claude-sonnet-4-6',
+      model:      'claude-3-haiku-20240307',
       max_tokens: 1024,
       system:     SYSTEM_PROMPT,
       messages:   [...history, { role:'user', content: userMessage }],
