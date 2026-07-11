@@ -15,6 +15,7 @@
  *  - onSnapshot real-time sidebar (no polling)
  */
 
+import { functions, httpsCallable } from './firebase.js';
 import { auth }  from './firebase-config.js';
 import {
   subscribeToSessions, teardownSubscription,
