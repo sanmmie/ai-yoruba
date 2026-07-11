@@ -27,7 +27,7 @@ import { subscribeToSubscription, startCheckout } from './modules/paymentService
 import { logger }                             from './utils/logger.js';
 
 // ── Constants ─────────────────────────────────────────────────
-const API_ENDPOINT     = import.meta.env.VITE_AI_ENDPOINT ?? 'https://us-central1-ai-yoruba.cloudfunctions.net/yorubaAI';
+const API_ENDPOINT = import.meta.env.VITE_AI_ENDPOINT ?? 'https://us-central1-ai-yoruba.cloudfunctions.net/yorubaAI';
 const MAX_MSG_LEN      = 2000;
 const DEBOUNCE_MS      = 800;
 const MAX_RETRIES      = 2;
