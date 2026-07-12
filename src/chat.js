@@ -1,17 +1,18 @@
 // src/chat.js
 import { auth, functions, httpsCallable } from './firebase.js';
 import { onAuthStateChanged } from 'firebase/auth';
+import { logger } from './utils/logger.js';
 
 let currentUser = null;
-let chatHistory = [];
+const chatHistory = [];
 
 // Wait for user to be signed in
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
   if (user) {
-    console.log('User is signed in:', user.uid);
+    logger.info('User is signed in:', { uid: user.uid });
   } else {
-    console.log('User is not signed in');
+    logger.info('User is not signed in');
   }
 });
 
@@ -22,19 +23,26 @@ async function sendMessage(userInput, history = []) {
       throw new Error('User is not authenticated');
     }
 
-    // ✅ CORRECT: Use httpsCallable
     const yorubaAI = httpsCallable(functions, 'yorubaAI');
-    
-    // Call the Cloud Function
     const result = await yorubaAI({
       message: userInput,
       history: history
     });
 
+    logger.info('AI Response generated', { response: result.data.response });
     return result.data.response;
     
   } catch (error) {
-    console.error('Error calling YorùbáGPT:', error);
+    logger.error('Error calling YorùbáGPT:', error);
+    
+    if (error.code === 'unauthenticated') {
+      logger.error('User is not authenticated. Please sign in.');
+    } else if (error.code === 'resource-exhausted') {
+      logger.error('Rate limit exceeded or daily quota reached.');
+    } else if (error.code === 'internal') {
+      logger.error('Internal server error. Please try again later.');
+    }
+    
     throw error;
   }
 }
@@ -48,8 +56,8 @@ document.getElementById('chat-form')?.addEventListener('submit', async (e) => {
   if (!text || !currentUser) return;
   
   input.value = '';
+  input.style.height = 'auto';
   
-  // Add user message to UI
   addMessageToUI(text, 'user');
   chatHistory.push({ role: 'user', content: text });
   
@@ -62,7 +70,6 @@ document.getElementById('chat-form')?.addEventListener('submit', async (e) => {
   }
 });
 
-// Helper to add messages to UI
 function addMessageToUI(text, sender) {
   const container = document.getElementById('chat-messages');
   if (!container) return;
@@ -70,9 +77,21 @@ function addMessageToUI(text, sender) {
   const div = document.createElement('div');
   div.className = `message ${sender}`;
   div.textContent = text;
+  
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
 
-// Make sendMessage available globally for debugging
+document.getElementById('user-input')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById('chat-form')?.dispatchEvent(new Event('submit'));
+  }
+});
+
+document.getElementById('user-input')?.addEventListener('input', (e) => {
+  e.target.style.height = 'auto';
+  e.target.style.height = e.target.scrollHeight + 'px';
+});
+
 window.sendMessage = sendMessage;

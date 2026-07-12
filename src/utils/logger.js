@@ -33,6 +33,8 @@ function log(level, message, error = null, context = {}) {
       `[YGPT:${level.toUpperCase()}]`, message, error ?? '', context
   // eslint-disable-next-line no-console
   // eslint-disable-next-line no-console
+  // eslint-disable-next-line no-console
+  // eslint-disable-next-line no-console
     );
     if (error && !IS_PROD) console.debug(error.stack);
   } else if (level === 'error' || level === 'warn') {
