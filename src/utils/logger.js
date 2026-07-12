@@ -28,21 +28,17 @@ function log(level, message, error = null, context = {}) {
   };
 
   if (!IS_PROD) {
-    // eslint-disable-next-line no-console
     console[{ debug:'debug', info:'info', warn:'warn', error:'error' }[level]](
       `[YGPT:${level.toUpperCase()}]`, message, error ?? '', context
-  // eslint-disable-next-line no-console
-  // eslint-disable-next-line no-console
-  // eslint-disable-next-line no-console
-  // eslint-disable-next-line no-console
     );
+  // eslint-disable-next-line no-console
     if (error && !IS_PROD) console.debug(error.stack);
   } else if (level === 'error' || level === 'warn') {
-    // eslint-disable-next-line no-console
     console.error('[YGPT]', JSON.stringify(entry));
   }
 
   // Sentry — enable by setting VITE_SENTRY_DSN
+  // eslint-disable-next-line no-console
   // if (IS_PROD && level === 'error' && window.Sentry) {
   //   window.Sentry.withScope((scope) => {
   //     scope.setExtras(redact(context));
