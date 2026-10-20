@@ -6,7 +6,7 @@
 
 **YorùbáGPT** is an AI-powered ecosystem for the Yorùbá language, culture, and education – built in partnership with **Adekunle Ajasin University (AAUA)**. We go beyond a simple chatbot: we are building the foundational AI platform that preserves, promotes, and empowers the Yorùbá language for generations to come.
 
-🔗 **Live Demo:** [yorubagpt.netlify.app](http://yorubagpt.netlify.app)
+🔗 **Live Demo:** [ai-yoruba.web.app](https://ai-yoruba.web.app)
 
 ---
 
