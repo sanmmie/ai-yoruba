@@ -13,6 +13,7 @@
     "test": "jest --forceExit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
     "axios": "^1.6.8",
     "cors": "^2.8.5",
     "express": "^4.19.2",

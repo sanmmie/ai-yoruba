@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 if (admin.apps.length === 0) admin.initializeApp();
 
 exports.yorubaAI              = require('./handlers/aiHandler').yorubaAI;
+exports.yorubaAIv2            = require('./handlers/aiHandlerV2').yorubaAIv2;
 exports.createCheckoutSession = require('./handlers/paymentHandler').createCheckoutSession;
 exports.stripeWebhook         = require('./handlers/webhookStripe').stripeWebhook;
 exports.flutterwaveWebhook    = require('./handlers/webhookFlutterwave').flutterwaveWebhook;
