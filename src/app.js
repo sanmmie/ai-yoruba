@@ -221,35 +221,56 @@ async function handleDelete(id) {
 }
 
 // ── AI call ───────────────────────────────────────────────────
-async function callAI(message, attempt = 0) {
-  const token = await auth.currentUser.getIdToken(false);
-  const ctrl  = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 45000);
-  try {
-    const res = await fetch(API_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}`, 'X-Requested-With':'XMLHttpRequest' },
-      body: JSON.stringify({ message, history: conversationHistory.slice(0,-1).map(({ role, content }) => ({ role, content })) }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(timer);
-    if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
-      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
-      logger.warn(`AI ${res.status}, retry in ${delay|0}ms`, null, { attempt });
-      await new Promise(r => setTimeout(r, delay)); return callAI(message, attempt + 1);
-    }
-    if (!res.ok) {
-      const b = await res.json().catch(() => ({}));
-      if (res.status === 401) throw new AppError('Kò sí ìgbàláàyè. Jọ̀wọ́ wọlé lẹ́ẹ̀kan sí i.','UNAUTHORIZED');
-      if (res.status === 402) throw new AppError(MSG.UPGRADE, 'PAYMENT_REQUIRED');
-      if (res.status === 429) throw new AppError(b.error ?? MSG.RATE_LIMIT, 'RATE_LIMITED');
-      throw new AppError(b.error ?? MSG.GENERIC_ERR, `HTTP_${res.status}`);
-    }
-    const data = await res.json();
-    if (!data.response) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
-    return data.response;
-  } catch (err) { clearTimeout(timer); if (err.name === 'AbortError') throw new AppError(MSG.TIMEOUT,'TIMEOUT'); throw err; }
-}
+  async function callAI(message, attempt = 0) {
+    const token = await auth.currentUser.getIdToken(false);
+    const ctrl  = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 45000);
+    try {
+      const endpoint = import.meta.env.VITE_AI_STREAM_ENDPOINT ? API_ENDPOINT.replace('/yorubaAI','/yorubaAIv2/chat/stream') : API_ENDPOINT;
+      const res = await fetch(endpoint.includes('/chat/stream') ? endpoint : API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}`, 'X-Requested-With':'XMLHttpRequest' },
+        body: JSON.stringify({ message, history: conversationHistory.slice(0,-1).map(({ role, content }) => ({ role, content })) }),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
+        logger.warn(`AI ${res.status}, retry in ${delay|0}ms`, null, { attempt });
+        await new Promise(r => setTimeout(r, delay)); return callAI(message, attempt + 1);
+      }
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        if (res.status === 401) throw new AppError('Kò sí ìgbàláàyè. Jọ̀wọ́ wọlé lẹ́ẹ̀kan sí i.','UNAUTHORIZED');
+        if (res.status === 402) throw new AppError(MSG.UPGRADE, 'PAYMENT_REQUIRED');
+        if (res.status === 429) throw new AppError(b.error ?? MSG.RATE_LIMIT, 'RATE_LIMITED');
+        throw new AppError(b.error ?? MSG.GENERIC_ERR, `HTTP_${res.status}`);
+      }
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('text/event-stream')) {
+        // Fallback simple reader
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '', full = '';
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          buf += dec.decode(value,{stream:true});
+          const parts = buf.split('\n\n');
+          buf = parts.pop()||'';
+          for (const p of parts) {
+            if (!p.includes('data: ')) continue;
+            try { const d = JSON.parse(p.split('data: ')[1]); if (d.text) full += d.text; } catch {}
+          }
+        }
+        if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
+        return full;
+      }
+      const data = await res.json();
+      if (!data.response) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
+      return data.response;
+    } catch (err) { clearTimeout(timer); if (err.name === 'AbortError') throw new AppError(MSG.TIMEOUT,'TIMEOUT'); throw err; }
+  }
 
 // ── Send message ──────────────────────────────────────────────
 async function sendMessage() {
