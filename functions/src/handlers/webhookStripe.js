@@ -2,20 +2,6 @@
 /**
  * functions/src/handlers/webhookStripe.js
  * Stripe Webhook — HTTPS endpoint
- *
- * CRITICAL SECURITY: Signature Verification
- * Every request MUST be verified with stripe.webhooks.constructEvent().
- * Without this, an attacker can POST a fake "checkout.session.completed"
- * and activate premium for free.
- *
- * express.raw() is REQUIRED — the HMAC is computed over the raw byte buffer.
- * Using express.json() silently corrupts the signature check.
- *
- * Events handled:
- *  checkout.session.completed      → activate subscription
- *  customer.subscription.updated   → sync status
- *  customer.subscription.deleted   → downgrade to free
- *  invoice.payment_failed          → mark past_due
  */
 const functions = require('firebase-functions');
 const admin     = require('firebase-admin');
@@ -23,20 +9,29 @@ const express   = require('express');
 const Stripe    = require('stripe');
 const { log }   = require('../utils/adminLogger');
 
-const router = express.Router();
-router.use(express.raw({ type: 'application/json' })); // RAW body required
+const app = express();
 
-router.post('/', async (req, res) => {
+app.post('/', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig    = req.headers['stripe-signature'];
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!sig || !secret) { console.error('[StripeWH] Missing sig or secret'); return res.status(400).send('Config error'); }
 
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
   let event;
-  try { event = stripe.webhooks.constructEvent(req.body, sig, secret); }
+  try {
+    const payload = req.rawBody || req.body;
+    event = stripe.webhooks.constructEvent(payload, sig, secret);
+  }
   catch (err) { console.error('[StripeWH] Sig verification failed:', err.message); return res.status(400).send(`Webhook Error: ${err.message}`); }
 
   try {
+    const eventRef = admin.firestore().collection('stripeEvents').doc(event.id);
+    const eventSnap = await eventRef.get();
+    if (eventSnap.exists) {
+      return res.status(200).json({ received: true, duplicate: true });
+    }
+    await eventRef.set({ type: event.type, receivedAt: admin.firestore.FieldValue.serverTimestamp() });
+
     switch (event.type) {
 
       case 'checkout.session.completed': {
@@ -45,12 +40,15 @@ router.post('/', async (req, res) => {
         const uid = s.client_reference_id ?? s.subscription_data?.metadata?.firebaseUID;
         if (!uid) { log.error('checkout.session.completed: no firebaseUID', null, { sessionId: s.id }); break; }
         const stripeSub = await stripe.subscriptions.retrieve(s.subscription);
-        await setSubscription(uid, {
-          plan:'premium', status:'active', provider:'stripe',
-          stripeCustomerId: s.customer, subscriptionId: s.subscription,
-          currentPeriodEnd: admin.firestore.Timestamp.fromMillis(stripeSub.current_period_end * 1000),
-        });
-        log.info('Premium activated via Stripe', { uid, subId: s.subscription });
+        const status = stripeSub.status;
+        if (status === 'active' || status === 'trialing') {
+          await setSubscription(uid, {
+            plan:'premium', status: status, provider:'stripe',
+            stripeCustomerId: s.customer, subscriptionId: s.subscription,
+            currentPeriodEnd: admin.firestore.Timestamp.fromMillis(stripeSub.current_period_end * 1000),
+          });
+          log.info('Premium activated via Stripe', { uid, subId: s.subscription, status });
+        }
         break;
       }
 
@@ -58,12 +56,26 @@ router.post('/', async (req, res) => {
         const sub = event.data.object;
         const uid = await uidFromCustomer(stripe, sub.customer);
         if (!uid) break;
-        const status = sub.status === 'active' ? 'active' : sub.status === 'past_due' ? 'past_due' : 'inactive';
-        await admin.firestore().collection('users').doc(uid).update({
-          'subscription.status':           status,
-          'subscription.currentPeriodEnd': admin.firestore.Timestamp.fromMillis(sub.current_period_end * 1000),
-          'subscription.updatedAt':        admin.firestore.FieldValue.serverTimestamp(),
-        });
+        const status = sub.status;
+        if (status === 'active' || status === 'trialing') {
+          await admin.firestore().collection('users').doc(uid).update({
+            'subscription.status':           status,
+            'subscription.plan':             'premium',
+            'subscription.currentPeriodEnd': admin.firestore.Timestamp.fromMillis(sub.current_period_end * 1000),
+            'subscription.updatedAt':        admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } else if (status === 'canceled' || status === 'unpaid' || status === 'incomplete_expired') {
+          await admin.firestore().collection('users').doc(uid).update({
+            'subscription.plan':'free', 'subscription.status': status,
+            'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } else if (status === 'past_due') {
+          await admin.firestore().collection('users').doc(uid).update({
+            'subscription.status':           'past_due',
+            'subscription.currentPeriodEnd': admin.firestore.Timestamp.fromMillis(sub.current_period_end * 1000),
+            'subscription.updatedAt':        admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
         log.info('Subscription updated', { uid, status });
         break;
       }
@@ -96,7 +108,7 @@ router.post('/', async (req, res) => {
     }
   } catch (err) {
     log.error('StripeWebhook handler error', err, { eventType: event.type });
-    return res.status(500).send('Handler error'); // triggers Stripe retry
+    return res.status(500).send('Handler error');
   }
 
   res.status(200).json({ received: true });
@@ -113,9 +125,6 @@ async function uidFromCustomer(stripe, customerId) {
   try { const c = await stripe.customers.retrieve(customerId); return c.metadata?.firebaseUID ?? null; }
   catch { return null; }
 }
-
-const app = express();
-app.use('/', router);
 
 exports.stripeWebhook = functions
   .runWith({ timeoutSeconds: 30, secrets: ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET'] })
