@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
     outDir:    'dist',
     sourcemap: mode !== 'production',
     minify:    'terser',
-    terserOptions: { compress: { drop_console: true, drop_debugger: true } },
+    terserOptions: { compress: { drop_console: false, drop_debugger: true, pure_funcs: mode === 'production' ? ['console.log','console.debug','console.info'] : [] } },
     rollupOptions: {
       input: {
         main:    new URL('./index.html',   import.meta.url).pathname,
