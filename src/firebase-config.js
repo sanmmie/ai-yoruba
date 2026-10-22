@@ -17,6 +17,7 @@ import { getAuth, connectAuthEmulator }                     from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator,
          enableIndexedDbPersistence }                       from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator }           from 'firebase/functions';
+import { getAnalytics, isSupported }                        from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -43,6 +44,20 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 export const auth      = getAuth(app);
 export const db        = getFirestore(app);
 export const functions = getFunctions(app, 'us-central1');
+
+export let analytics = null;
+const analyticsConsent = typeof localStorage !== 'undefined' ? localStorage.getItem('ygpt_analytics_consent') : null;
+if (analyticsConsent === 'granted') {
+  isSupported().then((supported) => {
+    if (supported) {
+      try {
+        analytics = getAnalytics(app);
+      } catch (e) {
+        // ignore
+      }
+    }
+  }).catch(() => {});
+}
 
 if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === 'true') {
   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
