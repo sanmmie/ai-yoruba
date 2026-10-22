@@ -1,9 +1,7 @@
 'use strict';
 /**
  * functions/src/middleware/rateLimiter.js
- * Per-UID burst limiter: 20 req/min (free) | 60 req/min (premium)
- * Primary: Upstash Redis (set UPSTASH_REDIS_URL + UPSTASH_REDIS_TOKEN)
- * Fallback: in-memory Map (sufficient for single-instance / low traffic)
+ * Per-UID burst limiter
  */
 const WINDOW_MS = 60_000;
 const LIMITS    = { free: 20, premium: 60 };
@@ -24,7 +22,7 @@ function getRedis() {
 }
 
 async function checkRateLimit(uid, plan = 'free') {
-  const limit = LIMITS[plan] ?? LIMITS.free;
+  const limit = parseInt(process.env.BURST_LIMIT || LIMITS[plan] || LIMITS.free, 10);
   const redis  = getRedis();
   return redis ? checkRedis(redis, `rl:${uid}`, limit) : checkMem(`rl:${uid}`, limit);
 }
@@ -39,16 +37,16 @@ async function checkRedis(redis, key, limit) {
     pipe.expire(key, Math.ceil(WINDOW_MS / 1000) + 1);
     const res = await pipe.exec(), count = res[1] + 1;
     if (count > limit) { await redis.zremrangebyscore(key, now, now); return { allowed:false, remaining:0, resetInMs:WINDOW_MS }; }
-    return { allowed:true, remaining:limit - count, resetInMs:WINDOW_MS };
+    return { allowed:true, remaining:Math.max(0, limit - count), resetInMs:WINDOW_MS };
   } catch (err) { console.error('[RateLimiter] Redis error — failing open:', err.message); return { allowed:true, remaining:limit, resetInMs:WINDOW_MS }; }
 }
 
 function checkMem(key, limit) {
   const now = Date.now(), entry = _mem.get(key);
-  if (!entry || now - entry.windowStart >= WINDOW_MS) { _mem.set(key, { count:1, windowStart:now }); return { allowed:true, remaining:limit-1, resetInMs:WINDOW_MS }; }
+  if (!entry || now - entry.windowStart >= WINDOW_MS) { _mem.set(key, { count:1, windowStart:now }); return { allowed:true, remaining:Math.max(0, limit-1), resetInMs:WINDOW_MS }; }
   entry.count++;
   if (entry.count > limit) return { allowed:false, remaining:0, resetInMs:WINDOW_MS - (now - entry.windowStart) };
-  return { allowed:true, remaining:limit - entry.count, resetInMs:WINDOW_MS - (now - entry.windowStart) };
+  return { allowed:true, remaining:Math.max(0, limit - entry.count), resetInMs:WINDOW_MS - (now - entry.windowStart) };
 }
 
 module.exports = { checkRateLimit };
