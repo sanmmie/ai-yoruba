@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="yo">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Gba YorùbáGPT Premium — ìbéèrè àìlópin, ìdáhùn yára." />
+  <meta name="theme-color" content="#0a1f14" />
+  <title>Ìdíyelé — YorùbáGPT Premium</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="pricing-body">
+
+<header class="pricing-header">
+  <a href="/index.html" class="brand" style="text-decoration:none">
+    <span class="brand-icon" aria-hidden="true">🌍</span>
+    <span class="brand-name">YorùbáGPT</span>
+  </a>
+  <a href="/index.html" class="pricing-back-link">← Padà sí ìbánisọ̀rọ̀</a>
+</header>
+
+<main class="pricing-main">
+  <div class="pricing-intro">
+    <h1 class="pricing-title">Yan ìpele rẹ</h1>
+    <p class="pricing-subtitle">Bẹ̀rẹ̀ ọfẹ̀, ṣe ìgbéga nígbàkugbà</p>
+  </div>
+
+  <div class="pricing-grid">
+
+    <div class="pricing-card">
+      <div class="pricing-card-header">
+        <h2 class="pricing-plan-name">Ọfẹ̀</h2>
+        <p class="pricing-price"><span class="price-amount">$0</span><span class="price-period">/oṣù</span></p>
+      </div>
+      <ul class="pricing-features">
+        <li>Ìbéèrè 10 lójúmọ́</li>
+        <li>Ìbánisọ̀rọ̀ mẹ́ta ni ọkọọkan</li>
+        <li>Àwọn ìlànà èdè Yorùbá pàtàkì</li>
+        <li>Owe àti ìtumọ̀ wọn</li>
+      </ul>
+      <a href="/index.html" class="pricing-cta pricing-cta--ghost">Tẹ̀síwájú pẹ̀lú Ọfẹ̀</a>
+    </div>
+
+    <div class="pricing-card pricing-card--featured">
+      <div class="pricing-featured-tag">Tí a gbà ní ìmọ̀ràn jùlọ</div>
+      <div class="pricing-card-header">
+        <h2 class="pricing-plan-name">✦ Premium</h2>
+        <p class="pricing-price"><span class="price-amount">$9.99</span><span class="price-period">/oṣù</span></p>
+        <p class="pricing-price-alt">tàbí ₦15,000/oṣù pẹ̀lú Flutterwave</p>
+      </div>
+      <ul class="pricing-features">
+        <li>Ìbéèrè àìlópin</li>
+        <li>Ìbánisọ̀rọ̀ tí kò lópin</li>
+        <li>Ìfòfindè ìdáhùn yára</li>
+        <li>Ìtọ́ka àṣà àti ìtàn gígbòòrò</li>
+        <li>Àtìlẹ́yìn ààyò</li>
+      </ul>
+      <div class="pricing-provider-buttons">
+        <button id="checkout-stripe-btn" class="pricing-cta pricing-cta--primary" type="button">
+          Sanwó pẹ̀lú Stripe (USD)
+        </button>
+        <button id="checkout-flw-btn" class="pricing-cta pricing-cta--secondary" type="button">
+          Sanwó pẹ̀lú Flutterwave (₦)
+        </button>
+      </div>
+      <div id="pricing-error" class="auth-error" role="alert" aria-live="assertive"></div>
+    </div>
+
+  </div>
+
+  <p class="pricing-footnote">Gbogbo ìsanwó jẹ́ aabò. O lè fagilé nígbàkugbà.</p>
+</main>
+
+<script type="module" src="/src/pricing.js"></script>
+</body>
+</html>
