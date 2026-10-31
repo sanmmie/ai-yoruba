@@ -1,7 +1,15 @@
+#!/usr/bin/env node
+/**
+ * scripts/audit-premium.js
+ *
+ * Lists users whose plan is 'premium' but who have no provider or
+ * subscriptionId — i.e. self-granted or otherwise suspicious premium
+ * status.  Admin SDK, dry-run by default.
+ */
 const admin = require('firebase-admin');
+if (admin.apps.length === 0) admin.initializeApp();
 
-async function auditPremium() {
-  if (admin.apps.length === 0) admin.initializeApp();
+async function main() {
   const db = admin.firestore();
   const dryRun = process.env.DRY_RUN !== 'false';
   console.log(dryRun ? 'DRY RUN - no changes' : 'LIVE RUN');
@@ -19,4 +27,4 @@ async function auditPremium() {
   console.log(JSON.stringify(suspects, null, 2));
 }
 
-auditPremium().catch(e => { console.error(e); process.exit(1); });
+main().catch(e => { console.error(e); process.exit(1); });

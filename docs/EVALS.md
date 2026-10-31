@@ -1,19 +1,23 @@
 # EVALS.md
 
-## Yoruba Evaluation
-
-### Running Evals
+## Usage
 ```bash
-node scripts/run-evals.js
+node scripts/run-evals.js --token <test-token> --endpoint <url>
 ```
+Writes results to `evals/results/<timestamp>.json`.  Exits non-zero below a
+threshold recorded in `scripts/run-evals.js`.
 
-Results written to `evals/results/<timestamp>.json`
+## Cases
+`evals/yoruba_eval.jsonl` — 60 starter cases across greetings, grammar
+correction, tone marks, owe, history, translation both ways, refusal and
+safety, prompt injection, and sensitive-topic handling (health, religion,
+minors).
 
-### Adding Cases
-Add to `evals/yoruba_eval.jsonl` with format:
-```json
-{"id":"...","category":"...","prompt":"...","must_include":[],"must_not_include":[],"notes":"..."}
-```
+## Provenance
+Every case's provenance is recorded in docs/CONTENT_PROVENANCE.md.  Never
+fabricate expected Yorùbá — mark cases for human review.
 
-### Scoring
-Rule-based checks for diacritics, required terms, forbidden terms. Cases needing human review are marked.
+## Measurement
+- Yorùbá versus English token-cost measurement is recorded in the results
+  file.
+- Threshold and pass rate are defined in scripts/run-evals.js.

@@ -6,6 +6,7 @@ const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
 const { verifyActiveSubscription, refundQuota } = require('../middleware/subscriptionGate');
 const { checkRateLimit } = require('../middleware/rateLimiter');
+const { requireConsents } = require('../middleware/consentGate');
 const { log } = require('../utils/adminLogger');
 const { SYSTEM_PROMPT } = require('../prompts/system');
 
@@ -32,7 +33,7 @@ app.post('/chat/stream', async (req, res) => {
     }
     const uid = decoded.uid;
 
-    const { sessionId, message, mode, regenerate } = req.body || {};
+    const { sessionId, message, mode: _mode, regenerate: _regenerate } = req.body || {};
     if (typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: { message: 'invalid-argument' } });
     }
@@ -44,9 +45,20 @@ app.post('/chat/stream', async (req, res) => {
       return res.status(400).json({ error: { message: 'invalid-argument' } });
     }
 
-    const burst = await checkRateLimit(uid, 'free');
+const burst = await checkRateLimit(uid, 'free');
     if (!burst.allowed) {
       return res.status(429).json({ error: { message: 'rate-limited' } });
+    }
+
+    // NDPA: the account cannot chat until Terms + Privacy and the 18+
+    // declaration are recorded and current against POLICY_VERSION.
+    try {
+      await requireConsents(uid);
+    } catch (e) {
+      if (e.code === 'consent_required') {
+        return res.status(403).json({ error: { message: 'consent_required', missing: e.missing, policyVersion: e.policyVersion } });
+      }
+      throw e;
     }
 
     const quota = await verifyActiveSubscription(uid);
@@ -102,13 +114,13 @@ app.post('/chat/stream', async (req, res) => {
         messages: [...history, { role: 'user', content: message.trim() }],
       });
 
-      stream.on('text', (text) => {
+stream.on('text', (text) => {
         if (disconnected) return;
         fullText += text;
         res.write(`event: delta\ndata: ${JSON.stringify({ text })}\n\n`);
       });
 
-      const final = await stream.finalMessage();
+      await stream.finalMessage();
       if (disconnected) {
         await refundQuota(uid);
         return res.end();

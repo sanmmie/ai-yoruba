@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: '22'  # Upgraded from 20 to 22
+  NODE_VERSION: '22'
 
 jobs:
   frontend:
@@ -45,6 +45,25 @@ jobs:
       - run: npm run lint
       - run: npm test
 
+  gates:
+    name: Compliance gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Legacy-host grep gate
+        run: |
+          set -e
+          if grep -ri "ai-yoruba\.firebaseapp\.com\|deltaoscore\|netlify\|vercel" . --exclude-dir=.git --exclude-dir=node_modules --exclude="*.lock" --exclude="*.png" --exclude="*.jpg" --exclude="*.jpeg" --exclude="*.gif" --exclude="*.svg" --exclude="*.ico" --exclude="*.webp" ; then
+            echo "ERROR: legacy host reference found"; exit 1
+          fi
+          echo "legacy-host grep gate passed"
+      - name: TRANSFERS consistency check
+        run: node scripts/check-transfers.js
+      - name: Secret scan
+        run: |
+          set -e
+          npx --yes trufflehog3 detect --json . 2>/dev/null || true
+
   audit:
     name: Security Audit
     runs-on: ubuntu-latest
@@ -52,6 +71,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '${{ env.NODE_VERSION }}' }
+      - run: npm ci
       - run: npm audit --audit-level=high
       - name: Audit functions
         working-directory: functions
@@ -59,19 +79,17 @@ jobs:
 
   deploy-backend:
     name: Deploy → Firebase
-    needs: [functions, audit]
+    needs: [functions, audit, gates]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     env:
-      # Silences the Node.js 20 deprecation warning for GitHub Actions runners
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '${{ env.NODE_VERSION }}' }
-      - run: npm ci  # Install dependencies for the root (if any)
+      - run: npm ci
 
-      # Deploy Firestore rules and indexes using the Firebase action
       - name: Deploy Firestore rules + indexes
         uses: w9jds/firebase-action@v13.14.0
         with:
@@ -79,12 +97,9 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
 
-      # Deploy Cloud Functions using the same action
       - name: Deploy Cloud Functions
         uses: w9jds/firebase-action@v13.14.0
         with:
           args: deploy --only functions --project ${{ secrets.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-
-

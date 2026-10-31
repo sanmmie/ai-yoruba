@@ -1,5 +1,4 @@
 {
-  "preset": "ts-jest/presets/js-with-ts",
   "testEnvironment": "node",
   "testMatch": ["**/*.test.js"],
   "collectCoverageFrom": ["src/**/*.js"],

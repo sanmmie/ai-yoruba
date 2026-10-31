@@ -20,8 +20,9 @@ import {
 
 import { auth }                        from './firebase-config.js';
 import { initializeChat, teardownChat } from './app.js';
-import { subscribeToSubscription }      from './modules/paymentService.js';
+import { subscribeToSubscription }      from './paymentService.js';
 import { logger }                       from './utils/logger.js';
+import { mountConsentGate, ensureConsented } from './ui/consent.js';
 
 const $ = id => document.getElementById(id);
 
@@ -140,7 +141,18 @@ async function handleAuthState(user) {
     const d = $('verify-email-display'); if (d) d.textContent = user.email ?? '';
     showAuthGate('verify'); return;
   }
-  if (prevUid !== user.uid) { prevUid = user.uid; await revealApp(user); }
+  // Consent gate: the account cannot chat until Terms + Privacy and the
+  // 18+ declaration are recorded (NDPA).  Anonymous trial users see the
+  // same compact gate.
+  if (prevUid !== user.uid) {
+    prevUid = user.uid;
+    const ok = await ensureConsented();
+    if (!ok) {
+      mountConsentGate(() => revealApp(user));
+      return;
+    }
+    await revealApp(user);
+  }
 }
 onAuthStateChanged(auth, handleAuthState);
 

@@ -80,5 +80,4 @@ async function refundQuota(uid) {
   }
 }
 
-const today = () => getLagosDateString();
 module.exports = { verifyActiveSubscription, refundQuota, getLagosDateString };
