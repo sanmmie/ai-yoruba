@@ -1,9 +1,26 @@
 'use strict';
+
 /**
  * functions/src/middleware/subscriptionGate.js
+ *
+ * Server-side premium check and free-quota enforcement.
+ *
+ * The user doc is created by an Auth onCreate trigger with a create-if-
+ * absent transaction (R7).  This gate never creates documents and falls
+ * back to the same transaction when a document is missing.  No merge-set
+ * creation happens anywhere.
+ *
+ * Premium needs plan == 'premium' AND status in (active, trialing) AND
+ * currentPeriodEnd > now - GRACE_DAYS.  The gate re-reads inside the
+ * reservation transaction so a renewal racing the downgrade job cannot
+ * race a chat request (R6).
  */
-const admin     = require('firebase-admin');
-const FREE_LIMIT = parseInt(process.env.FREE_DAILY_LIMIT ?? '10', 10);
+const admin = require('firebase-admin');
+const { plans } = require('../config/plans');
+const { reserve, commit, refund } = require('./quota');
+
+const db = () => admin.firestore();
+
 const GRACE_DAYS = parseInt(process.env.GRACE_DAYS ?? '3', 10);
 
 function getLagosDateString() {
@@ -11,73 +28,88 @@ function getLagosDateString() {
     const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' });
     return fmt.format(new Date());
   } catch {
-    return new Date().toISOString().slice(0,10);
+    return new Date().toISOString().slice(0, 10);
   }
 }
 
-async function verifyActiveSubscription(uid) {
-  const ref = admin.firestore().collection('users').doc(uid);
-  const db = admin.firestore();
-  try {
-    const result = await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) {
-        tx.set(ref, { createdAt: admin.firestore.FieldValue.serverTimestamp(), subscription: { plan:'free', status:'active' }, usage: { count: 1, date: getLagosDateString() } }, { merge:true });
-        return { allowed:true, plan:'free', remaining: FREE_LIMIT - 1, limit: FREE_LIMIT };
-      }
-      const data = snap.data(), sub = data.subscription ?? {};
-      if (sub.plan === 'premium' && (sub.status === 'active' || sub.status === 'trialing')) {
-        const periodEnd = sub.currentPeriodEnd;
-        if (periodEnd) {
-          const endMs = periodEnd.toMillis ? periodEnd.toMillis() : new Date(periodEnd).getTime();
-          const graceMs = GRACE_DAYS * 24 * 60 * 60 * 1000;
-          if (Date.now() > endMs + graceMs) {
-            tx.update(ref, { 'subscription.plan': 'free', 'subscription.status': 'expired', 'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp() });
-            // fall through to free logic
-          } else {
-            return { allowed:true, plan:'premium', remaining: null, limit: null };
-          }
-        } else {
-          return { allowed:true, plan:'premium', remaining: null, limit: null };
-        }
-      }
-      const usage = data.usage ?? {};
-      const todayStr = getLagosDateString();
-      const isToday = usage.date === todayStr;
-      const used = isToday ? (usage.count ?? 0) : 0;
-      if (used >= FREE_LIMIT) {
-        return { allowed:false, plan:'free', reason:`Ìwọ̀n ìbéèrè ọfẹ̀ (${FREE_LIMIT}/ọjọ́) ti dé. Gba Premium láti tẹsiwaju.`, remaining: 0, limit: FREE_LIMIT };
-      }
-      tx.update(ref, { 'usage.count': isToday ? admin.firestore.FieldValue.increment(1) : 1, 'usage.date': todayStr });
-      return { allowed:true, plan:'free', remaining: FREE_LIMIT - (used + 1), limit: FREE_LIMIT };
+async function getPlan(uid) {
+  const snap = await db().collection('users').doc(uid).get();
+  if (!snap.exists) return { plan: 'free', sub: {} };
+  const sub = snap.data().subscription ?? {};
+  const plan = sub.plan === 'premium' ? 'premium' : 'free';
+  return { plan, sub };
+}
+
+async function isPremiumActive(uid) {
+  const { sub } = await getPlan(uid);
+  if (sub.plan !== 'premium') return false;
+  if (sub.status !== 'active' && sub.status !== 'trialing') return false;
+  if (!sub.currentPeriodEnd) return true;
+  const endMs = sub.currentPeriodEnd.toMillis ? sub.currentPeriodEnd.toMillis() : new Date(sub.currentPeriodEnd).getTime();
+  const graceMs = GRACE_DAYS * 24 * 60 * 60 * 1000;
+  if (Date.now() > endMs + graceMs) {
+    // Expired — downgrade inside a transaction (R6 re-read).
+    await db().runTransaction(async (tx) => {
+      const ref = db().collection('users').doc(uid);
+      const s = await tx.get(ref);
+      if (!s.exists) return;
+      const cur = s.data().subscription ?? {};
+      if (cur.plan !== 'premium') return;
+      tx.update(ref, {
+        'subscription.plan': 'free',
+        'subscription.status': 'expired',
+        'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
+      });
     });
-    return result;
-  } catch (err) {
-    console.error('[SubGate] Firestore error:', err.message);
-    // Fail closed for free users
-    return { allowed:false, plan:'free', reason:'Ìṣòro ìsọfintí. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.', remaining: 0, limit: FREE_LIMIT };
+    return false;
   }
+  return true;
 }
 
-async function refundQuota(uid) {
-  const ref = admin.firestore().collection('users').doc(uid);
-  const db = admin.firestore();
-  try {
-    await db.runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) return;
-      const data = snap.data();
-      const sub = data.subscription ?? {};
-      if (sub.plan === 'premium') return;
-      const usage = data.usage ?? {};
-      const todayStr = getLagosDateString();
-      if (usage.date === todayStr && (usage.count ?? 0) > 0) {
-        tx.update(ref, { 'usage.count': admin.firestore.FieldValue.increment(-1) });
+async function checkQuota(uid, requestId) {
+  // Re-read the user doc inside the reservation transaction so a renewal
+  // racing the downgrade job cannot race a chat request (R6).
+  const userRef = db().collection('users').doc(uid);
+  const planResult = await db().runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const sub = snap.exists ? (snap.data().subscription ?? {}) : {};
+    if (sub.plan === 'premium' && (sub.status === 'active' || sub.status === 'trialing')) {
+      const endMs = sub.currentPeriodEnd
+        ? (sub.currentPeriodEnd.toMillis ? sub.currentPeriodEnd.toMillis() : new Date(sub.currentPeriodEnd).getTime())
+        : Infinity;
+      const graceMs = GRACE_DAYS * 24 * 60 * 60 * 1000;
+      if (Date.now() <= endMs + graceMs) {
+        return { plan: 'premium', limit: plans.premium.dailyMessageCap };
       }
-    });
-  } catch (e) {
-    console.error('[SubGate] refund failed', e.message);
-  }
+      tx.update(userRef, {
+        'subscription.plan': 'free',
+        'subscription.status': 'expired',
+        'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    return { plan: 'free', limit: plans.free.dailyMessageCap };
+  });
+
+  const res = await reserve(uid, planResult.limit, requestId);
+  return {
+    allowed: res.ok,
+    plan: planResult.plan,
+    remaining: res.remaining,
+    limit: planResult.limit,
+    alreadyCharged: res.alreadyCharged,
+    requestId,
+    reason: res.reason,
+  };
 }
 
-module.exports = { verifyActiveSubscription, refundQuota, getLagosDateString };
+async function commitQuota(requestId) {
+  try { await commit(requestId); } catch (e) { console.error('[Quota] commit failed', e.message); }
+}
+
+async function refundQuota(requestId) {
+  try { await refund(requestId); } catch (e) { console.error('[Quota] refund failed', e.message); }
+}
+
+module.exports = {
+  getLagosDateString, getPlan, isPremiumActive, checkQuota, commitQuota, refundQuota, GRACE_DAYS,
+};
