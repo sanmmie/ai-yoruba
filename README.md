@@ -1,12 +1,12 @@
 ```markdown
 # YorùbáGPT — The Digital Brain of Yorùbá Civilization
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/your-badge-id/deploy-status)](https://yorubagpt.netlify.app/)
+[![Firebase Hosting Status](https://api.Firebase Hosting.com/api/v1/badges/your-badge-id/deploy-status)](https://ai-yoruba.web.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **YorùbáGPT** is an AI-powered ecosystem for the Yorùbá language, culture, and education – built in partnership with **Adekunle Ajasin University (AAUA)**. We go beyond a simple chatbot: we are building the foundational AI platform that preserves, promotes, and empowers the Yorùbá language for generations to come.
 
-🔗 **Live Demo:** [yorubagpt.netlify.app](http://yorubagpt.netlify.app)
+🔗 **Live Demo:** [ai-yoruba.web.app](http://ai-yoruba.web.app)
 
 ---
 
@@ -73,7 +73,7 @@ We follow a **freemium model** to maximize accessibility while ensuring sustaina
 | **Backend**    | Firebase Cloud Functions (Node.js) |
 | **Database**   | Cloud Firestore (NoSQL) |
 | **Authentication** | Firebase Auth |
-| **Hosting**    | Netlify (primary) / Firebase Hosting / Docker |
+| **Hosting**    | Firebase Hosting (primary) / Firebase Hosting / Docker |
 | **Deployment** | GitHub Actions, Docker, Nginx |
 | **Static Assets** | Vite build output in `public/` |
 
@@ -100,7 +100,7 @@ We follow a **freemium model** to maximize accessibility while ensuring sustaina
 ├── firestore.indexes.json # Firestore composite indexes
 ├── firestore.rules        # Firestore security rules
 ├── index.html             # Vite entry point
-├── netlify.toml           # Netlify deployment config
+├── firebase.json           # Firebase Hosting deployment config
 ├── nginx.conf             # Nginx reverse proxy config
 ├── package.json           # Dependencies and scripts
 ├── pricing.html           # (Optional standalone pricing page)
@@ -174,17 +174,17 @@ VITE_OPENAI_API_KEY=your_openai_key
 
 > **Never commit `.env.local` to version control** – environment files are ignored via `.gitignore`. `VITE_*` values are bundled into the public frontend; use Firebase Security Rules to protect data.
 
-If you see `Firebase: Error (auth/invalid-api-key)`, verify that `VITE_FIREBASE_API_KEY` is the real Web API key for this Firebase project (not `AIzaSy...` or another example value), and that the other `VITE_FIREBASE_*` values belong to the same project. Restart `npm run dev` after changing the file. For Netlify, set these variables in the site's build environment and trigger a new deploy; Vite embeds them at build time.
+If you see `Firebase: Error (auth/invalid-api-key)`, verify that `VITE_FIREBASE_API_KEY` is the real Web API key for this Firebase project (not `AIzaSy...` or another example value), and that the other `VITE_FIREBASE_*` values belong to the same project. Restart `npm run dev` after changing the file. For Firebase Hosting, set these variables in the site's build environment and trigger a new deploy; Vite embeds them at build time.
 
 ---
 
 ## 🚢 Deployment
 
-### Netlify (Recommended)
-1. Connect your GitHub repository to Netlify.
+### Firebase Hosting (Recommended)
+1. Connect your GitHub repository to Firebase Hosting.
 2. Set build command: `npm run build`
 3. Publish directory: `dist`
-4. Add the `VITE_FIREBASE_*` variables in Netlify's UI, then trigger a new deploy.
+4. Add the `VITE_FIREBASE_*` variables in Firebase Hosting's UI, then trigger a new deploy.
 
 ### Firebase Hosting
 ```bash
@@ -230,7 +230,7 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 
 - **Project Lead:** Oluwasanmi Titus Adebowale ([@sanmmie](https://github.com/sanmmie))
 - **Email:** [your-email@example.com]  
-- **Website:** [yorubagpt.netlify.app](http://yorubagpt.netlify.app)
+- **Website:** [ai-yoruba.web.app](http://ai-yoruba.web.app)
 
 ---
 
@@ -253,3 +253,4 @@ This project is licensed under the MIT License – see the [LICENSE](LICENSE) fi
 You can further customize the contact email, add a screenshot or logo, and link to a **CONTRIBUTING.md** and **LICENSE** file when you create them. This README will make a strong impression on visitors, potential contributors, and investors alike.
 
 Great work so far! Let me know if you need any adjustments.
+

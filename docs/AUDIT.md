@@ -37,5 +37,6 @@ Branch: fix/master-upgrade (initialized from current repo state)
 - **functions/src/index.js** only exports 4 functions, no cleanupUserData. No test endpoint exported currently.
 - **vite.config.js:11** has `drop_console: true` - removes all console including console.error.
 - **index.html** references icons that may not exist - manifest.json needs checking.
-- **netlify.toml:16** CSP has wrong functions host `gen-lang-client-0861985618` vs actual project `ai-yoruba` based on API_ENDPOINT.
+- **firebase.json:16** CSP has wrong functions host `gen-lang-client-0861985618` vs actual project `ai-yoruba` based on API_ENDPOINT.
 - **Status:** To confirm details as we go.
+

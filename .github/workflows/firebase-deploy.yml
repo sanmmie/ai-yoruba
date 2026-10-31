@@ -57,25 +57,6 @@ jobs:
         working-directory: functions
         run: npm audit --audit-level=high
 
-  deploy-frontend:
-    name: Deploy → Netlify
-    needs: [frontend, functions, audit]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with: { name: dist, path: dist }
-      - uses: nwtgck/actions-netlify@v3
-        with:
-          publish-dir:       ./dist
-          production-branch: main
-          github-token:      ${{ secrets.GITHUB_TOKEN }}
-          deploy-message:    "Deploy ${{ github.sha }}"
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID:    ${{ secrets.NETLIFY_SITE_ID }}
-
   deploy-backend:
     name: Deploy → Firebase
     needs: [functions, audit]
@@ -105,4 +86,5 @@ jobs:
           args: deploy --only functions --project ${{ secrets.FIREBASE_PROJECT_ID }}
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
 

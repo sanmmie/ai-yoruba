@@ -11,7 +11,7 @@ const { SYSTEM_PROMPT } = require('../prompts/system');
 
 const allowedOrigins = [
   'https://ai-yoruba.web.app',
-  'https://yorubagpt.netlify.app',
+  'https://ai-yoruba.web.app',
   process.env.APP_BASE_URL
 ].filter(Boolean);
 
@@ -146,3 +146,4 @@ app.post('/chat/stream', async (req, res) => {
 exports.yorubaAIv2 = functions
   .runWith({ timeoutSeconds: 300, memory: '512MB', secrets: ['ANTHROPIC_API_KEY'] })
   .https.onRequest(app);
+

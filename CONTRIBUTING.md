@@ -18,7 +18,7 @@ Whether you're a developer, linguist, student, or cultural enthusiast, there's a
 
 ## 🧑‍💻 Who Can Contribute?
 
-- **Developers** – Frontend (Vite), Backend (Firebase), DevOps (Docker/Netlify), Mobile, API integrations.
+- **Developers** – Frontend (Vite), Backend (Firebase), DevOps (Docker/Firebase Hosting), Mobile, API integrations.
 - **Linguists / Yorùbá Scholars** – Tone correction, grammar rules, dataset curation, translation validation.
 - **UI/UX Designers** – Make the interface beautiful, intuitive, and accessible.
 - **Researchers** – NLP models, speech synthesis (TTS/STT), corpus building.
@@ -263,3 +263,4 @@ git push origin main
 | Sync fork | `git pull upstream main` |
 
 ---
+
