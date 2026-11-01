@@ -1,111 +1,70 @@
 'use strict';
-
-/**
- * functions/src/handlers/consent.js
- *
- * Server-side consent recording, withdrawal and verification.
- *
- * NDPA compliance: consent is recorded by the server, never by the client.
- * Each record is idempotent keyed by (uid, type) so concurrent requests
- * (R13) cannot create duplicate records or race a withdrawal against a
- * chat reservation.
- *
- * Records live in users/{uid}/consents/{type} and are readable ONLY by the
- * owner (firestore.rules).  A server-only evidence copy may be added later
- * if counsel requires it; that collection is denied to clients.
- */
 const functions = require('firebase-functions');
-const admin     = require('firebase-admin');
-const { log }   = require('../utils/adminLogger');
-const { POLICY_VERSION, REQUIRED_CONSENTS, CONSENT_TYPES } = require('../config/policy');
+const admin = require('firebase-admin');
+const { corsMiddleware } = require('../utils/cors');
 
-const db = () => admin.firestore();
-
-function consentRef(uid, type) {
-  return db().collection('users').doc(uid).collection('consents').doc(type);
-}
-
-/**
- * Record a consent.  Idempotent: re-granting an existing consent updates
- * the locale and clears withdrawnAt; withdrawing then re-granting works.
- * The policyVersion stored is always the version at write time, so a later
- * policy bump invalidates the record automatically.
- */
-async function recordConsent(uid, { type, granted, locale = 'en' }) {
-  if (!CONSENT_TYPES[type]) {
-    throw new functions.https.HttpsError('invalid-argument', 'Unknown consent type');
-  }
-  const now = admin.firestore.FieldValue.serverTimestamp();
-  const data = {
-    type,
-    granted: Boolean(granted),
-    policyVersion: POLICY_VERSION,
-    locale,
-    createdAt: now,
-    updatedAt: now,
-  };
-  if (!granted) {
-    data.withdrawnAt = now;
-  } else {
-    data.withdrawnAt = admin.firestore.FieldValue.delete();
-  }
-  // Idempotent transaction (R13): concurrent duplicates collapse to one write.
-  await db().runTransaction(async (tx) => {
-    tx.set(consentRef(uid, type), data, { merge: true });
-  });
-  log.info('Consent recorded', { type, granted, uid });
-  return { ok: true };
-}
-
-/**
- * Verify the required consents exist and are current.  Returns
- * { ok, missing: [] } so the chat endpoint can reject with
- * consent_required and the client can show the consent screen.  Called
- * from the chat endpoint at reservation time so a withdrawal racing a chat
- * request is evaluated atomically (R13).
- */
-async function verifyRequiredConsents(uid) {
-  const snap = await db().collection('users').doc(uid).collection('consents').get();
-  const present = {};
-  for (const doc of snap.docs) present[doc.id] = doc.data();
-  const missing = [];
-  for (const type of REQUIRED_CONSENTS) {
-    const rec = present[type];
-    if (!rec || !rec.granted || rec.withdrawnAt || rec.policyVersion !== POLICY_VERSION) {
-      missing.push(type);
-    }
-  }
-  return { ok: missing.length === 0, missing, policyVersion: POLICY_VERSION };
-}
-
-/**
- * Read the consents the owner is allowed to see (used by Settings).
- */
-async function listConsents(uid) {
-  const snap = await db().collection('users').doc(uid).collection('consents').get();
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-}
+const POLICY_VERSION = process.env.POLICY_VERSION || 'VERIFY';
 
 exports.consentFunctions = functions
-  .runWith({ timeoutSeconds: 30 })
-  .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Not signed in');
-    const uid = context.auth.uid;
-    const { action, type, granted, locale } = data || {};
-    if (action === 'record') {
-      if (!type || typeof granted !== 'boolean') {
-        throw new functions.https.HttpsError('invalid-argument', 'type and granted are required');
-      }
-      await recordConsent(uid, { type, granted, locale });
-      return { ok: true };
-    }
-    if (action === 'list') {
-      return { consents: await listConsents(uid), policyVersion: POLICY_VERSION };
-    }
-    if (action === 'verify') {
-      return await verifyRequiredConsents(uid);
-    }
-    throw new functions.https.HttpsError('invalid-argument', 'Unknown action');
-  });
+  .region('us-central1')
+  .https.onRequest((req, res) => {
+    corsMiddleware(req, res, async () => {
+      try {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
+        const authHeader = req.headers.authorization || '';
+        if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: 'unauthenticated' });
+        const token = await admin.auth().verifyIdToken(authHeader.slice(7));
+        const uid = token.uid;
+        const { action, type, granted, locale } = req.body || {};
+        const db = admin.firestore();
 
-module.exports = { recordConsent, verifyRequiredConsents, listConsents, consentRef, CONSENT_TYPES, REQUIRED_CONSENTS };
+        if (action === 'verify') {
+          const types = ['terms_privacy', 'age_18'];
+          const snaps = await Promise.all(types.map(t => db.doc(users//consents/).get()));
+          const ok = snaps.every(s => {
+            if (!s.exists) return false;
+            const d = s.data();
+            return d.granted === true && d.withdrawnAt == null && (d.policyVersion === POLICY_VERSION || POLICY_VERSION === 'VERIFY');
+          });
+          return res.json({ ok });
+        }
+
+        if (action === 'record') {
+          const allowed = ['terms_privacy', 'age_18', 'training', 'analytics'];
+          if (!allowed.includes(type)) return res.status(400).json({ error: 'invalid_type' });
+          const ref = db.doc(users//consents/);
+          await db.runTransaction(async (tx) => {
+            const snap = await tx.get(ref);
+            if (snap.exists && snap.data().granted === granted) return;
+            tx.set(ref, {
+              type,
+              granted: !!granted,
+              policyVersion: POLICY_VERSION,
+              locale: locale || 'en',
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              withdrawnAt: granted ? null : admin.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+          });
+          return res.json({ ok: true });
+        }
+
+        if (action === 'list') {
+          const snap = await db.collection(users//consents).get();
+          const consents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          return res.json({ consents });
+        }
+
+        if (action === 'withdraw') {
+          const allowed = ['terms_privacy', 'age_18', 'training', 'analytics'];
+          if (!allowed.includes(type)) return res.status(400).json({ error: 'invalid_type' });
+          const ref = db.doc(users//consents/);
+          await ref.set({ withdrawnAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          return res.json({ ok: true });
+        }
+
+        return res.status(400).json({ error: 'invalid_action' });
+      } catch (e) {
+        return res.status(500).json({ error: 'internal' });
+      }
+    });
+  });
