@@ -1,53 +1,34 @@
 'use strict';
-
-/**
- * functions/src/handlers/export.js
- *
- * Data-subject access request (DSAR): "Download my data".
- * Returns a JSON document containing the profile, consents, sessions and
- * messages owned by the caller.  Never includes server-only collections
- * (usage, reservations, rate limits, reports, evidence).
- */
 const functions = require('firebase-functions');
-const admin     = require('firebase-admin');
-const { log }   = require('../utils/adminLogger');
-
-const db = () => admin.firestore();
-
-async function exportUserData(uid) {
-  const userRef = db().collection('users').doc(uid);
-  const [userSnap, consentsSnap, sessionsSnap] = await Promise.all([
-    userRef.get(),
-    userRef.collection('consents').get(),
-    userRef.collection('sessions').get(),
-  ]);
-
-  const sessions = [];
-  for (const s of sessionsSnap.docs) {
-    const msgSnap = await s.ref.collection('messages').orderBy('seq', 'asc').get();
-    sessions.push({
-      id: s.id,
-      ...s.data(),
-      messages: msgSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-    });
-  }
-
-  return {
-    exportedAt: new Date().toISOString(),
-    profile: userSnap.exists ? userSnap.data() : null,
-    consents: consentsSnap.docs.map(d => ({ id: d.id, ...d.data() })),
-    sessions,
-  };
-}
+const admin = require('firebase-admin');
+const { corsMiddleware } = require('../utils/cors');
 
 exports.exportFunctions = functions
-  .runWith({ timeoutSeconds: 60 })
-  .https.onCall(async (data, context) => {
-    if (!context.auth) throw new functions.https.HttpsError('unauthenticated', 'Not signed in');
-    const uid = context.auth.uid;
-    const payload = await exportUserData(uid);
-    log.info('Data exported', { uid });
-    return payload;
+  .region('us-central1')
+  .https.onRequest((req, res) => {
+    corsMiddleware(req, res, async () => {
+      try {
+        if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
+        const authHeader = req.headers.authorization || '';
+        if (!authHeader.startsWith('Bearer ')) return res.status(401).json({ error: 'unauthenticated' });
+        const token = await admin.auth().verifyIdToken(authHeader.slice(7));
+        const uid = token.uid;
+        const db = admin.firestore();
+        const userSnap = await db.collection('users').doc(uid).get();
+        const sessions = await db.collection('users').doc(uid).collection('sessions').get();
+        const data = {
+          profile: userSnap.exists ? userSnap.data() : null,
+          sessions: [],
+        };
+        for (const s of sessions.docs) {
+          const msgs = await db.collection('users').doc(uid).collection('sessions').doc(s.id).collection('messages').orderBy('seq','asc').get();
+          data.sessions.push({ id: s.id, ...s.data(), messages: msgs.docs.map(m => ({ id: m.id, ...m.data() })) });
+        }
+        res.setHeader('Content-Disposition', 'attachment; filename="yorubagpt-export.json"');
+        res.setHeader('Content-Type', 'application/json');
+        return res.json(data);
+      } catch (e) {
+        return res.status(500).json({ error: 'internal' });
+      }
+    });
   });
-
-module.exports = { exportUserData };
