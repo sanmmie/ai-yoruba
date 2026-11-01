@@ -8,11 +8,15 @@ export default defineConfig(({ mode }) => ({
     outDir:    'dist',
     sourcemap: mode !== 'production',
     minify:    'terser',
-<<<<<<< HEAD
-    terserOptions: { compress: { drop_console: true, drop_debugger: true } },
-=======
-    terserOptions: { compress: { drop_console: false, drop_debugger: true, pure_funcs: mode === 'production' ? ['console.log','console.debug','console.info'] : [] } },
->>>>>>> fix/master-upgrade-v2
+    terserOptions: {
+      compress: {
+        drop_console: false,
+        drop_debugger: true,
+        pure_funcs: mode === 'production'
+          ? ['console.log', 'console.debug', 'console.info']
+          : [],
+      },
+    },
     rollupOptions: {
       input: {
         main:    new URL('./index.html',   import.meta.url).pathname,
@@ -28,7 +32,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:5001', rewrite: p => p.replace(/^\/api/, ''), changeOrigin: true },
+      '/api': {
+        target: 'http://localhost:5001',
+        rewrite: (p) => p.replace(/^\/api/, ''),
+        changeOrigin: true,
+      },
     },
   },
 }));
