@@ -12,7 +12,6 @@
  *    Terms, Privacy Notice, Sign out.
  */
 import { t } from '../i18n/i18n.js';
-import { toast } from './toast.js';
 
 function groupSessions(sessions) {
   const now = new Date();
@@ -30,7 +29,7 @@ function groupSessions(sessions) {
   return groups;
 }
 
-export function mountSidebar({ onNewChat, onSwitch, onRename, onDelete, onSignOut, onSettings, plan }) {
+export function mountSidebar({ onNewChat: _onNewChat, onSwitch, onRename, onDelete, onSignOut, onSettings, plan }) {
   const aside = document.getElementById('sidebar');
   if (!aside) return null;
 
