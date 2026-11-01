@@ -23,7 +23,7 @@ async function call(action, data) {
   return r.data;
 }
 
-export async function openSettings({ uid, plan, consents, retention, onDeleteAccount }) {
+export async function openSettings({ uid: _uid, plan: _plan, consents: _consents, retention: _retention, onDeleteAccount }) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `

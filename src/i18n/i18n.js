@@ -54,13 +54,13 @@ export function t(keyPath, fallback = '') {
   const parts = keyPath.split('.');
   let node = CACHE[current] || {};
   for (const p of parts) {
-    if (node == null || typeof node !== 'object') { node = null; break; }
+    if (node === null || typeof node !== 'object') { node = null; break; }
     node = node[p];
   }
-  if (node == null) {
+  if (node === null) {
     const en = CACHE['en'] || {};
     let n = en;
-    for (const p of parts) { if (n == null || typeof n !== 'object') { n = null; break; } n = n[p]; }
+    for (const p of parts) { if (n === null || typeof n !== 'object') { n = null; break; } n = n[p]; }
     node = n;
   }
   return typeof node === 'string' ? node : fallback;
