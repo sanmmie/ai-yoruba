@@ -19,11 +19,7 @@ const Stripe    = require('stripe');
 const axios     = require('axios');
 const { log }   = require('../utils/adminLogger');
 
-<<<<<<< HEAD
-const BASE_URL = process.env.APP_BASE_URL ?? 'https://yorubagpt.netlify.app';
-=======
 const BASE_URL = process.env.APP_URL ?? process.env.APP_BASE_URL ?? 'https://ai-yoruba.web.app';
->>>>>>> fix/master-upgrade-v2
 
 const PLAN_CONFIG = {
   premium: {
@@ -99,7 +95,3 @@ async function createFlutterwaveLink({ uid, email, planCfg }) {
   if (res.data.status !== 'success') throw new Error(`Flutterwave: ${res.data.message}`);
   return res.data.data.link;
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> fix/master-upgrade-v2

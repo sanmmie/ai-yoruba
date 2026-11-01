@@ -6,16 +6,6 @@
       "**/.*",
       "**/node_modules/**"
     ],
-<<<<<<< HEAD
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
-  "firestore": {
-=======
     "cleanUrls": true,
     "rewrites": [
       {
@@ -61,7 +51,6 @@
   "firestore": {
     "database": "(default)",
     "location": "nam5",
->>>>>>> fix/master-upgrade-v2
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
@@ -71,10 +60,6 @@
     "runtimeOptions": {
       "serviceAccount": "yorubagpt-sa@ai-yoruba.iam.gserviceaccount.com"
     }
-<<<<<<< HEAD
-  }
-}
-=======
   },
   "emulators": {
     "auth": { "port": 9099 },
@@ -85,4 +70,3 @@
     "singleProjectMode": true
   }
 }
->>>>>>> fix/master-upgrade-v2

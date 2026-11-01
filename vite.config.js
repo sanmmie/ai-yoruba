@@ -2,12 +2,12 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig(({ mode }) => ({
-  root:      '.',
+  root: '.',
   publicDir: 'public',
   build: {
-    outDir:    'dist',
+    outDir: 'dist',
     sourcemap: mode !== 'production',
-    minify:    'terser',
+    minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: false,
@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     },
     rollupOptions: {
       input: {
-        main:    new URL('./index.html',   import.meta.url).pathname,
+        main: new URL('./index.html', import.meta.url).pathname,
         pricing: new URL('./pricing.html', import.meta.url).pathname,
       },
       output: {
