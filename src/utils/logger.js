@@ -28,20 +28,14 @@ function log(level, message, error = null, context = {}) {
   };
 
   if (!IS_PROD) {
-<<<<<<< HEAD
-=======
     // eslint-disable-next-line no-console
->>>>>>> fix/master-upgrade-v2
     console[{ debug:'debug', info:'info', warn:'warn', error:'error' }[level]](
       `[YGPT:${level.toUpperCase()}]`, message, error ?? '', context
     );
   // eslint-disable-next-line no-console
     if (error && !IS_PROD) console.debug(error.stack);
   } else if (level === 'error' || level === 'warn') {
-<<<<<<< HEAD
-=======
     // eslint-disable-next-line no-console
->>>>>>> fix/master-upgrade-v2
     console.error('[YGPT]', JSON.stringify(entry));
   }
 

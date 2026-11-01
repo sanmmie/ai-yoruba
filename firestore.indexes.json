@@ -1,9 +1,4 @@
 {
-<<<<<<< HEAD
-  "indexes": []
-}
-=======
   "indexes": [],
   "fieldOverrides": []
 }
->>>>>>> fix/master-upgrade-v2

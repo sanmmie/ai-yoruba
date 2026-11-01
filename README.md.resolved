@@ -1,0 +1,227 @@
+# YorùbáGPT — The Digital Brain of Yorùbá Civilization
+
+[![Firebase Hosting](https://img.shields.io/badge/Hosting-Firebase-orange)](https://ai-yoruba.web.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**YorùbáGPT** is an AI-powered ecosystem for the Yorùbá language, culture, and education – built in partnership with **Adekunle Ajasin University (AAUA)**. We go beyond a simple chatbot: we are building the foundational AI platform that preserves, promotes, and empowers the Yorùbá language for generations to come.
+
+🔗 **Live Demo:** [ai-yoruba.web.app](https://ai-yoruba.web.app)
+
+---
+
+## 🚀 Vision
+
+> *To become the authoritative AI operating system for Yorùbá language, culture, education, and research – bridging the gap between tradition and technology.*
+
+We are not just another AI that speaks Yorùbá. We are the digital brain that understands **proverbs, history, Ifá literature, oral traditions, names, festivals, cuisine, and more**.
+
+---
+
+## 🎯 Why YorùbáGPT?
+
+### ✅ Strengths
+- **Academic Credibility** – Official partnership with AAUA’s Department of Yorùbá Studies.
+- **Holistic Ecosystem** – Beyond chat: translation, speech, education, research, APIs.
+- **Cultural Depth** – Built with domain expertise, not generic LLMs.
+
+### 📈 Opportunities We Pursue
+| Sector | Application |
+|--------|-------------|
+| 🎓 Education | WAEC/NECO/JAMB AI tutor, homework helper, grammar correction |
+| 🏛️ Government | Digital language preservation, official translation |
+| 🌍 Diaspora | Reconnection with language and culture |
+| 💼 Business | AI customer support in Yorùbá |
+| 🏥 Healthcare | Native-language health communication |
+| 🔬 Research | AI-assisted corpus analysis, tone restoration, OCR |
+| 🛠️ Developers | API platform for translation, speech, dictionary, spell-check |
+
+---
+
+## ✨ Features
+
+- **Conversational AI** – Natural dialogue in Yorùbá (and English).
+- **Translation & Dictionary** – Yorùbá ↔ English with tone marks.
+- **Speech Recognition & Synthesis** – Voice input/output (STT/TTS).
+- **Cultural Intelligence** – Proverbs, history, festivals, names, cuisine.
+- **Educational Tools** – Homework assistance, essay support, pronunciation guide.
+- **Image Understanding** – Describe and interpret images in Yorùbá.
+- **Document Processing** – Translate long documents, batch processing.
+- **Developer APIs** – Integrate Yorùbá AI into your own apps.
+
+---
+
+## 💰 Subscription Tiers
+
+We follow a **freemium model** to maximize accessibility while ensuring sustainability.
+
+| Plan       | Monthly (NGN) | Monthly (USD) | Target Users |
+|------------|---------------|---------------|--------------|
+| **Free**   | ₦0            | $0            | Casual users (limited daily prompts) |
+| **Student**| ₦1,500        | $2.99         | Students, language learners |
+| **Standard**| ₦3,000       | $5.99         | Professionals, everyday users |
+| **Pro**    | ₦7,500        | $12.99        | Researchers, educators, creators |
+| **Enterprise**| Custom    | Custom        | Schools, universities, businesses |
+
+---
+
+## 🧰 Tech Stack
+
+| Layer          | Technology |
+|----------------|------------|
+| **Frontend**   | Vite + vanilla JavaScript – see `src/` |
+| **Backend**    | Firebase Cloud Functions (Node.js) |
+| **Database**   | Cloud Firestore (NoSQL) |
+| **Authentication** | Firebase Auth |
+| **Hosting**    | Firebase Hosting (primary) / Docker |
+| **Deployment** | GitHub Actions, Docker, Nginx |
+| **Static Assets** | Vite build output in `dist/` |
+
+---
+
+## 📂 Project Structure
+
+```
+.
+├── .github/workflows      # CI/CD pipelines
+├── functions/             # Firebase Cloud Functions (backend)
+├── public/                # Static assets (images, fonts, etc.)
+├── src/                   # Frontend source code
+│   ├── api/               # Streaming client
+│   ├── modules/           # Session, payment, modal modules
+│   ├── ui/                # Composer, messages, sidebar, settings
+│   ├── utils/
+│   └── app.js             # Chat core
+├── evals/                 # Evaluation cases
+├── docs/                  # Documentation & audit notes
+├── .env.example           # Environment variables template
+├── firebase.json          # Firebase Hosting/Functions config
+├── firestore.rules        # Firestore security rules
+├── firestore.indexes.json
+├── package.json
+└── vite.config.js
+```
+
+---
+
+## 🛠️ Local Development
+
+### Prerequisites
+- Node.js (v18+)
+- npm or yarn
+- Firebase CLI (optional, for local functions)
+
+### Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/sanmmie/ai-yoruba.git
+   cd ai-yoruba
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment variables**
+   Copy `.env.example` to `.env.local` and replace every placeholder with values from your Firebase project:
+   ```bash
+   cp .env.example .env.local
+   ```
+   In PowerShell: `Copy-Item .env.example .env.local`
+
+   Find the web app config in Firebase Console → Project settings → General → Your apps. The example values are placeholders and will not work.
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+   The app will be available at http://localhost:5173
+
+5. **(Optional) Run Firebase Functions locally**
+   ```bash
+   npm run functions:dev
+   ```
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env.local` file with the following keys:
+
+```
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_bucket.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+
+# For Cloud Functions / backend
+FIREBASE_ADMIN_PRIVATE_KEY=your_private_key
+FIREBASE_ADMIN_CLIENT_EMAIL=your_service_account_email
+```
+
+Never commit `.env.local` to version control — environment files are ignored via `.gitignore`.  
+`VITE_*` values are bundled into the public frontend; use Firebase Security Rules to protect data.
+
+If you see `Firebase: Error (auth/invalid-api-key)`, verify that `VITE_FIREBASE_API_KEY` is the real Web API key for this Firebase project and that the other `VITE_FIREBASE_*` values belong to the same project. Restart `npm run dev` after changing the file.
+
+---
+
+## 🚢 Deployment
+
+### Firebase Hosting (Recommended)
+
+```bash
+npm run build
+firebase deploy --only hosting
+```
+
+Or connect the GitHub repository to Firebase Hosting, set build command `npm run build`, publish directory `dist`, and add the `VITE_FIREBASE_*` variables in the Hosting UI.
+
+### Docker
+
+```bash
+docker build -t yorubagpt .
+docker run -p 8080:80 yorubagpt
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. For major changes, open an issue first.
+
+- Fork the repo
+- Create your feature branch (`git checkout -b feature/AmazingFeature`)
+- Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+- Push to the branch (`git push origin feature/AmazingFeature`)
+- Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgements
+
+- **Adekunle Ajasin University (AAUA)** – Department of Yorùbá Studies, for their invaluable domain expertise and partnership.
+- **Open-source community** – for the tools that make this possible.
+- Our early users and testers – *E se gan-an o!* (Thank you very much!)
+
+---
+
+## 📬 Contact
+
+- **Project Lead:** Oluwasanmi Titus Adebowale ([@sanmmie](https://github.com/sanmmie))
+- **Website:** [ai-yoruba.web.app](https://ai-yoruba.web.app)
+
+---
+
+> “Láti fi èdè àti àṣà Yorùbá ṣe èrò tuntun fún ayé.”  
+> (Using the Yorùbá language and culture to create new innovations for the world.)

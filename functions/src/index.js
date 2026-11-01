@@ -2,27 +2,26 @@
 const admin = require('firebase-admin');
 if (admin.apps.length === 0) admin.initializeApp();
 
-exports.yorubaAI              = require('./handlers/aiHandler').yorubaAI;
-<<<<<<< HEAD
-exports.createCheckoutSession = require('./handlers/paymentHandler').createCheckoutSession;
-exports.stripeWebhook         = require('./handlers/webhookStripe').stripeWebhook;
-exports.flutterwaveWebhook    = require('./handlers/webhookFlutterwave').flutterwaveWebhook;
-=======
-exports.yorubaAIv2            = require('./handlers/aiHandlerV2').yorubaAIv2;
-exports.createCheckoutSession = require('./handlers/paymentHandler').createCheckoutSession;
-exports.stripeWebhook         = require('./handlers/webhookStripe').stripeWebhook;
-exports.flutterwaveWebhook    = require('./handlers/webhookFlutterwave').flutterwaveWebhook;
-exports.cleanupUserData       = require('./handlers/cleanup').cleanupUserData;
-
-// Phase 1: consent, deletion, export, reporting
-exports.consentFunctions       = require('./handlers/consent').consentFunctions;
-exports.deletionFunctions      = require('./handlers/deletion').deletionFunctions;
-exports.exportFunctions        = require('./handlers/export').exportFunctions;
-exports.reportFunctions        = require('./handlers/report').reportFunctions;
-
 const functions = require('firebase-functions');
 const { getFirestore } = require('firebase-admin/firestore');
 
+// AI handlers — keep both until Phase 5 removes the legacy path
+exports.yorubaAI              = require('./handlers/aiHandler').yorubaAI;
+exports.yorubaAIv2            = require('./handlers/aiHandlerV2').yorubaAIv2;
+
+// Payments
+exports.createCheckoutSession = require('./handlers/paymentHandler').createCheckoutSession;
+exports.stripeWebhook         = require('./handlers/webhookStripe').stripeWebhook;
+exports.flutterwaveWebhook    = require('./handlers/webhookFlutterwave').flutterwaveWebhook;
+
+// Account lifecycle
+exports.cleanupUserData       = require('./handlers/cleanup').cleanupUserData;
+exports.consentFunctions      = require('./handlers/consent').consentFunctions;
+exports.deletionFunctions     = require('./handlers/deletion').deletionFunctions;
+exports.exportFunctions       = require('./handlers/export').exportFunctions;
+exports.reportFunctions       = require('./handlers/report').reportFunctions;
+
+// Scheduled jobs
 exports.downgradeExpiredPremium = functions
   .runWith({ timeoutSeconds: 540 })
   .pubsub.schedule('every 24 hours')
@@ -63,11 +62,11 @@ exports.expireSessions = functions
     await batch.commit();
     return null;
   });
->>>>>>> fix/master-upgrade-v2
 
-const textToSpeech = require("@google-cloud/text-to-speech");
-const axios = require("axios");
-const FormData = require("form-data");
+// STT / TTS (Yoruba)
+const textToSpeech = require('@google-cloud/text-to-speech');
+const axios = require('axios');
+const FormData = require('form-data');
 
 const ttsClient = new textToSpeech.TextToSpeechClient();
 
@@ -80,7 +79,7 @@ exports.transcribeYorubaAudio = functions.https.onRequest(async (req, res) => {
   }
   try {
     const { audioBase64 } = req.body;
-    if (!audioBase64) return res.status(400).json({ error: "No audio data received" });
+    if (!audioBase64) return res.status(400).json({ error: 'No audio data received' });
     const audioBuffer = Buffer.from(audioBase64, 'base64');
     const formData = new FormData();
     formData.append('file', audioBuffer, { filename: 'speech.webm', contentType: 'audio/webm' });
@@ -89,12 +88,12 @@ exports.transcribeYorubaAudio = functions.https.onRequest(async (req, res) => {
     formData.append('temperature', '0.1');
     const apiKey = process.env.OPENAI_API_KEY || (functions.config().openai && functions.config().openai.key);
     const whisperResponse = await axios.post('https://api.openai.com/v1/audio/transcriptions', formData, {
-      headers: { ...formData.getHeaders(), 'Authorization': Bearer  }
+      headers: { ...formData.getHeaders(), Authorization: `Bearer ${apiKey}` },
     });
     return res.status(200).json({ text: whisperResponse.data.text });
   } catch (error) {
-    console.error("STT Error:", error);
-    return res.status(500).json({ error: "Failed to transcribe Yoruba audio", details: error.message });
+    console.error('STT Error:', error);
+    return res.status(500).json({ error: 'Failed to transcribe Yoruba audio', details: error.message });
   }
 });
 
@@ -107,16 +106,16 @@ exports.synthesizeYorubaVoice = functions.https.onRequest(async (req, res) => {
   }
   try {
     const { text } = req.body;
-    if (!text) return res.status(400).json({ error: "No text string provided" });
+    if (!text) return res.status(400).json({ error: 'No text string provided' });
     const request = {
-      input: { text: text },
+      input: { text },
       voice: { languageCode: 'yo-NG', name: 'yo-NG-Wavenet-A', ssmlGender: 'FEMALE' },
       audioConfig: { audioEncoding: 'MP3', speakingRate: 0.95 },
     };
     const [response] = await ttsClient.synthesizeSpeech(request);
     return res.status(200).json({ audioContent: response.audioContent.toString('base64') });
   } catch (error) {
-    console.error("TTS Error:", error);
-    return res.status(500).json({ error: "Failed to synthesize Yoruba speech" });
+    console.error('TTS Error:', error);
+    return res.status(500).json({ error: 'Failed to synthesize Yoruba speech' });
   }
 });
