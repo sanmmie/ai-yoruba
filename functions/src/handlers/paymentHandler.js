@@ -19,7 +19,7 @@ const Stripe    = require('stripe');
 const axios     = require('axios');
 const { log }   = require('../utils/adminLogger');
 
-const BASE_URL = process.env.APP_BASE_URL ?? 'https://ai-yoruba.web.app';
+const BASE_URL = process.env.APP_URL ?? process.env.APP_BASE_URL ?? 'https://ai-yoruba.web.app';
 
 const PLAN_CONFIG = {
   premium: {

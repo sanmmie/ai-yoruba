@@ -8,7 +8,7 @@ const cors = require('cors');
 
 const ALLOWED = (process.env.ALLOWED_ORIGINS ?? '')
   .split(',').map(o => o.trim()).filter(Boolean)
-  .concat(['https://ai-yoruba.web.app', 'http://localhost:5173', 'http://localhost:5000']);
+  .concat(['https://ai-yoruba.web.app', 'https://ai-yoruba.firebaseapp.com', 'http://localhost:5173', 'http://localhost:5000']);
 
 const corsMiddleware = cors({
   origin(origin, cb) {

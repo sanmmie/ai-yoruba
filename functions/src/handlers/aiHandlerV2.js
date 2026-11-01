@@ -12,7 +12,7 @@ const { plans } = require('../config/plans');
 const allowedOrigins = [
   'https://ai-yoruba.web.app',
   'https://ai-yoruba.firebaseapp.com',
-  process.env.APP_BASE_URL,
+  process.env.APP_URL,
 ].filter(Boolean);
 
 const app = express();
