@@ -265,9 +265,7 @@ async function callAI(message, attempt = 0) {
         const { done, value } = await reader.read();
         if (done) break;
         buf += dec.decode(value, { stream: true });
-        const parts = buf.split('
-
-');
+        const parts = buf.split('\n\n');
         buf = parts.pop() || '';
         for (const part of parts) {
           if (!part.includes('data: ')) continue;
