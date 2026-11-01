@@ -64,3 +64,59 @@ exports.expireSessions = functions
     return null;
   });
 >>>>>>> fix/master-upgrade-v2
+
+const textToSpeech = require("@google-cloud/text-to-speech");
+const axios = require("axios");
+const FormData = require("form-data");
+
+const ttsClient = new textToSpeech.TextToSpeechClient();
+
+exports.transcribeYorubaAudio = functions.https.onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') {
+    res.set('Access-Control-Allow-Methods', 'POST');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(204).send('');
+  }
+  try {
+    const { audioBase64 } = req.body;
+    if (!audioBase64) return res.status(400).json({ error: "No audio data received" });
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const formData = new FormData();
+    formData.append('file', audioBuffer, { filename: 'speech.webm', contentType: 'audio/webm' });
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'yo');
+    formData.append('temperature', '0.1');
+    const apiKey = process.env.OPENAI_API_KEY || (functions.config().openai && functions.config().openai.key);
+    const whisperResponse = await axios.post('https://api.openai.com/v1/audio/transcriptions', formData, {
+      headers: { ...formData.getHeaders(), 'Authorization': Bearer  }
+    });
+    return res.status(200).json({ text: whisperResponse.data.text });
+  } catch (error) {
+    console.error("STT Error:", error);
+    return res.status(500).json({ error: "Failed to transcribe Yoruba audio", details: error.message });
+  }
+});
+
+exports.synthesizeYorubaVoice = functions.https.onRequest(async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  if (req.method === 'OPTIONS') {
+    res.set('Access-Control-Allow-Methods', 'POST');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    return res.status(204).send('');
+  }
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "No text string provided" });
+    const request = {
+      input: { text: text },
+      voice: { languageCode: 'yo-NG', name: 'yo-NG-Wavenet-A', ssmlGender: 'FEMALE' },
+      audioConfig: { audioEncoding: 'MP3', speakingRate: 0.95 },
+    };
+    const [response] = await ttsClient.synthesizeSpeech(request);
+    return res.status(200).json({ audioContent: response.audioContent.toString('base64') });
+  } catch (error) {
+    console.error("TTS Error:", error);
+    return res.status(500).json({ error: "Failed to synthesize Yoruba speech" });
+  }
+});
