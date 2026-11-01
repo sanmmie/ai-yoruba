@@ -10,7 +10,9 @@ service cloud.firestore {
       return isAuthed() && request.auth.uid == userId;
     }
 
-    // Whitelist-only user profile. Path A: server-owned sessions.
+    // Phase 3 Path B: narrow client writes on sessions so create/rename/draft
+    // work with src/modules/sessions.js. Prefer Path A (server-owned) later
+    // when session ops move behind Cloud Functions / yorubaAIv2.
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create: if false;
@@ -27,7 +29,30 @@ service cloud.firestore {
 
       match /sessions/{sessionId} {
         allow read: if isOwner(userId);
-        allow create, update: if false;
+
+        // create: exact shape written by sessions.createSession
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['title', 'history', 'draft', 'createdAt', 'updatedAt'])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 200
+          && request.resource.data.history is list
+          && request.resource.data.history.size() == 0
+          && request.resource.data.draft is string
+          && request.resource.data.draft.size() == 0;
+
+        // update: title (rename), draft, history, updatedAt only
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['title', 'history', 'draft', 'updatedAt'])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 200
+          && request.resource.data.history is list
+          && request.resource.data.history.size() <= 100
+          && request.resource.data.draft is string
+          && request.resource.data.draft.size() <= 4000;
+
         allow delete: if isOwner(userId);
 
         match /messages/{messageId} {
