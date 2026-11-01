@@ -34,3 +34,8 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Vendored agent skills (not product code)
+.claude/
+.agents/
+.kilo/
