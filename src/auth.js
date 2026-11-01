@@ -24,7 +24,7 @@ import { initializeChat, teardownChat } from './app.js';
 import { subscribeToSubscription }      from './modules/paymentService.js';
 import { logger }                       from './utils/logger.js';
 =======
-import { subscribeToSubscription }      from './paymentService.js';
+import { subscribeToSubscription }      from './modules/paymentService.js';
 import { logger }                       from './utils/logger.js';
 import { mountConsentGate, ensureConsented } from './ui/consent.js';
 >>>>>>> fix/master-upgrade-v2
