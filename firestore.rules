@@ -10,6 +10,7 @@ service cloud.firestore {
       return isAuthed() && request.auth.uid == userId;
     }
 
+<<<<<<< HEAD
     function noPaymentFieldsWritten() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let forbidden = ['stripeCustomerId', 'flutterwaveCustomerId', 'subscriptionId', 'currentPeriodEnd', 'provider'];
@@ -39,10 +40,97 @@ service cloud.firestore {
           && request.resource.data.draft is string;
         allow delete: if isOwner(userId);
       }
+=======
+    // Whitelist-only user profile.  No payment fields, no subscription,
+    // no usage, no consents, no nested writes except displayName and
+    // preferences.  create and delete are denied — the Auth trigger and
+    // the deletion pipeline own those paths.
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if false;
+      allow update: if isOwner(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName','preferences'])
+        && request.resource.data.get('displayName') is string
+        && request.resource.data.get('preferences') is map;
+      allow delete: if false;
+
+      // Server-written consent records.  Owner read only — the server
+      // writes them inside a transaction, the client never writes.
+      match /consents/{type} {
+        allow read: if isOwner(userId);
+        allow create, update, delete: if false;
+      }
+
+      // Server-written session metadata.  Owner read only.
+      match /sessions/{sessionId} {
+        allow read: if isOwner(userId);
+        allow create, update: if false;
+        allow delete: if isOwner(userId);
+
+        match /messages/{messageId} {
+          allow read: if isOwner(userId);
+          // feedback is the ONLY client-writable message field.
+          allow create: if false;
+          allow update: if isOwner(userId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['feedback'])
+            && request.resource.data.get('feedback') in ['up', 'down', null];
+          allow delete: if false;
+        }
+      }
+
+      // Server-written concurrency leases.
+      match /leases/{leaseId} {
+        allow read, write: if false;
+      }
+
+      // Server-written quota reservations.
+      match /reservations/{requestId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Server-only collections.  Denied to clients at the bottom rule.
+
+    match /stripeEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /flwEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if false;
+    }
+
+    match /deletedUsers/{uid} {
+      allow read, write: if false;
+    }
+
+    match /usageLogs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /usage/{key} {
+      allow read, write: if false;
+    }
+
+    match /rateLimits/{key} {
+      allow read, write: if false;
+    }
+
+    match /shares/{shareId} {
+      allow read: if true;
+      allow write: if false;
+>>>>>>> fix/master-upgrade-v2
     }
 
     match /{document=**} {
       allow read, write: if false;
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> fix/master-upgrade-v2

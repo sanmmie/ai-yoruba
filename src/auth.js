@@ -20,8 +20,14 @@ import {
 
 import { auth }                        from './firebase-config.js';
 import { initializeChat, teardownChat } from './app.js';
+<<<<<<< HEAD
 import { subscribeToSubscription }      from './modules/paymentService.js';
 import { logger }                       from './utils/logger.js';
+=======
+import { subscribeToSubscription }      from './paymentService.js';
+import { logger }                       from './utils/logger.js';
+import { mountConsentGate, ensureConsented } from './ui/consent.js';
+>>>>>>> fix/master-upgrade-v2
 
 const $ = id => document.getElementById(id);
 
@@ -29,6 +35,10 @@ const $ = id => document.getElementById(id);
 const gProvider = new GoogleAuthProvider();
 gProvider.setCustomParameters({ prompt: 'select_account' });
 const ghProvider = new GithubAuthProvider();
+<<<<<<< HEAD
+=======
+ghProvider.addScope('user:email');
+>>>>>>> fix/master-upgrade-v2
 
 // ── Rate limiting ─────────────────────────────────────────────
 const RL = { count: 0, lockedUntil: 0 };
@@ -42,6 +52,10 @@ const resetRL = () => { RL.count = 0; RL.lockedUntil = 0; };
 
 // ── State ─────────────────────────────────────────────────────
 let isInit = false, prevUid = null, unsubSub = null;
+<<<<<<< HEAD
+=======
+let socialSignInInProgress = false;
+>>>>>>> fix/master-upgrade-v2
 
 // ── Helpers ───────────────────────────────────────────────────
 function showView(id) {
@@ -96,10 +110,22 @@ const ERRORS = {
   'auth/wrong-password':                           'Ọ̀rọ̀ àṣírí kò tọ́.',
   'auth/invalid-credential':                       'Ìmẹ̀lẹ̀ tàbí ọ̀rọ̀ àṣírí kò tọ́.',
   'auth/email-already-in-use':                     'Àkáǹtì pẹ̀lú ìmẹ̀lẹ̀ yìí ti wà tẹ́lẹ̀.',
+<<<<<<< HEAD
   'auth/weak-password':                            'Ọ̀rọ̀ àṣírí gbọdọ̀ ní 6+ ìwé.',
   'auth/popup-closed-by-user':                     '',
   'auth/cancelled-popup-request':                  '',
   'auth/account-exists-with-different-credential': 'Àkáǹtì yìí ti ní ọ̀nà wọlé míràn.',
+=======
+  'auth/weak-password':                            'Ọ̀rọ̀ àṣírí gbọdọ̀ ní 8+ ìwé.',
+  'auth/operation-not-allowed':                    'Ọ̀nà wọlé yìí kò tíì ṣiṣẹ́. Jọ̀wọ́ bá olùdarí sọ̀rọ̀.',
+  'auth/unauthorized-domain':                      'Ojú-òpó yìí kò sí lára àwọn domain tí Firebase gba. Jọ̀wọ́ fi sí Firebase Authentication settings.',
+  'auth/popup-blocked':                            'Ẹ̀rọ aṣàwárí dí popup náà. Jọ̀wọ́ gba popup láàyè kí o tún gbìyànjú.',
+  'auth/web-storage-unsupported':                  'Ẹ̀rọ aṣàwárí kò gba ìtọ́jú data tó yẹ fún ìwọlé. Jọ̀wọ́ tan cookies àti storage sí.',
+  'auth/popup-closed-by-user':                     '',
+  'auth/cancelled-popup-request':                  '',
+  'auth/account-exists-with-different-credential': 'Àkáǹtì yìí ti wà pẹ̀lú ọ̀nà wọlé míràn. Wọlé pẹ̀lú ọ̀nà àkọ́kọ́ tí o lò.',
+  'auth/credential-already-in-use':                'Ìdánimọ̀ yìí ti so mọ́ àkáǹtì míràn.',
+>>>>>>> fix/master-upgrade-v2
   'auth/network-request-failed':                   'Àṣìṣe nẹ́tíwọ́ọ̀kì. Ṣàyẹ̀wò ìsopọ̀ rẹ.',
   'auth/too-many-requests':                        'Ọ̀pọ̀ ìgbìyànjú. Dúró kekere kí o gbìyànjú lẹ́ẹ̀kan sí i.',
   'auth/user-disabled':                            'Àkáǹtì yìí ti dá dúró.',
@@ -115,19 +141,52 @@ function updateUserMenu(user) {
   if (a) { a.src = user.photoURL || `https://ui-avatars.com/api/?name=${init}&background=2A5C3E&color=C9A84C&size=64&bold=true`; a.alt = name; }
 }
 
+<<<<<<< HEAD
 // ── Auth state observer ───────────────────────────────────────
 onAuthStateChanged(auth, async user => {
+=======
+function isFederatedUser(user) {
+  return user.providerData.some(({ providerId }) =>
+    providerId === GoogleAuthProvider.PROVIDER_ID ||
+    providerId === GithubAuthProvider.PROVIDER_ID
+  );
+}
+
+// ── Auth state observer ───────────────────────────────────────
+async function handleAuthState(user) {
+>>>>>>> fix/master-upgrade-v2
   if (!user) {
     if (prevUid) { unsubSub?.(); unsubSub = null; teardownChat(); prevUid = null; }
     showAuthGate('login'); return;
   }
+<<<<<<< HEAD
   if (!user.emailVerified) {
+=======
+  if (!user.emailVerified && !isFederatedUser(user)) {
+>>>>>>> fix/master-upgrade-v2
     prevUid = null;
     const d = $('verify-email-display'); if (d) d.textContent = user.email ?? '';
     showAuthGate('verify'); return;
   }
+<<<<<<< HEAD
   if (prevUid !== user.uid) { prevUid = user.uid; await revealApp(user); }
 });
+=======
+  // Consent gate: the account cannot chat until Terms + Privacy and the
+  // 18+ declaration are recorded (NDPA).  Anonymous trial users see the
+  // same compact gate.
+  if (prevUid !== user.uid) {
+    prevUid = user.uid;
+    const ok = await ensureConsented();
+    if (!ok) {
+      mountConsentGate(() => revealApp(user));
+      return;
+    }
+    await revealApp(user);
+  }
+}
+onAuthStateChanged(auth, handleAuthState);
+>>>>>>> fix/master-upgrade-v2
 
 // ── Login ─────────────────────────────────────────────────────
 $('login-form')?.addEventListener('submit', async e => {
@@ -137,7 +196,12 @@ $('login-form')?.addEventListener('submit', async e => {
   if (!email || !pwd) { showErr($('login-error'), 'Jọ̀wọ́ tẹ ìmẹ̀lẹ̀ àti ọ̀rọ̀ àṣírí rẹ.'); return; }
   setLoading($('login-btn'), true, 'Ń wọlé...');
   try { await signInWithEmailAndPassword(auth, email, pwd); resetRL(); }
+<<<<<<< HEAD
   catch (err) { failRL(); logger.warn('Login failed', err, { email }); const m = yorubaErr(err.code); if (m) showErr($('login-error'), m); setLoading($('login-btn'), false); }
+=======
+  catch (err) { failRL(); logger.warn('Login failed', err, { email }); const m = yorubaErr(err.code); if (m) showErr($('login-error'), m); }
+  finally { setLoading($('login-btn'), false); }
+>>>>>>> fix/master-upgrade-v2
 });
 
 // ── Sign-up ───────────────────────────────────────────────────
@@ -147,6 +211,7 @@ $('signup-form')?.addEventListener('submit', async e => {
   if (!name || !email || !pwd) { showErr($('signup-error'), 'Jọ̀wọ́ pari gbogbo àwọn aaye.'); return; }
   if (pwd.length < 8) { showErr($('signup-error'), 'Ọ̀rọ̀ àṣírí gbọdọ̀ ní 8+ ìwé.'); return; }
   setLoading($('signup-btn'), true, 'Ń ṣẹ̀dá àkáǹtì...');
+<<<<<<< HEAD
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pwd);
     await updateProfile(cred.user, { displayName: name });
@@ -165,6 +230,48 @@ $('google-signin-btn')?.addEventListener('click', () => social(gProvider,  $('lo
 $('github-signin-btn')?.addEventListener('click', () => social(ghProvider, $('login-error')));
 $('google-signup-btn')?.addEventListener('click', () => social(gProvider,  $('signup-error')));
 $('github-signup-btn')?.addEventListener('click', () => social(ghProvider, $('signup-error')));
+=======
+  let accountCreated = false;
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pwd);
+    accountCreated = true;
+    await updateProfile(cred.user, { displayName: name });
+    await sendEmailVerification(cred.user);
+    logger.info('User registered', { uid: cred.user.uid });
+  } catch (err) {
+    logger.warn('Signup failed', err, { email, accountCreated });
+    if (accountCreated) {
+      showAuthGate('verify');
+      showErr($('verify-error'), yorubaErr(err.code));
+    } else {
+      showErr($('signup-error'), yorubaErr(err.code));
+    }
+  } finally { setLoading($('signup-btn'), false); }
+});
+
+// ── Social ────────────────────────────────────────────────────
+async function social(provider, errEl, btn) {
+  if (socialSignInInProgress) return;
+  socialSignInInProgress = true;
+  clearErr(errEl);
+  document.querySelectorAll('.social-btn').forEach(button => { button.disabled = true; });
+  btn?.setAttribute('aria-busy', 'true');
+  try { await signInWithPopup(auth, provider); resetRL(); }
+  catch (err) {
+    logger.warn('Social sign-in failed', err, { provider: provider.providerId });
+    const m = yorubaErr(err.code);
+    if (m) showErr(errEl, m);
+  } finally {
+    btn?.removeAttribute('aria-busy');
+    document.querySelectorAll('.social-btn').forEach(button => { button.disabled = false; });
+    socialSignInInProgress = false;
+  }
+}
+$('google-signin-btn')?.addEventListener('click', e => social(gProvider,  $('login-error'), e.currentTarget));
+$('github-signin-btn')?.addEventListener('click', e => social(ghProvider, $('login-error'), e.currentTarget));
+$('google-signup-btn')?.addEventListener('click', e => social(gProvider,  $('signup-error'), e.currentTarget));
+$('github-signup-btn')?.addEventListener('click', e => social(ghProvider, $('signup-error'), e.currentTarget));
+>>>>>>> fix/master-upgrade-v2
 
 // ── Email verification ────────────────────────────────────────
 $('resend-verify-btn')?.addEventListener('click', async () => {
@@ -172,9 +279,20 @@ $('resend-verify-btn')?.addEventListener('click', async () => {
   const btn = $('resend-verify-btn'); setLoading(btn, true, 'Ń rànsẹ́...'); clearErr($('verify-error'));
   try {
     await sendEmailVerification(user);
+<<<<<<< HEAD
     if (btn) btn.textContent = 'A ti fi ìmẹ̀lẹ̀ ránsẹ́ ✓';
     setTimeout(() => { if (btn) { btn.textContent = 'Tún Ìmẹ̀lẹ̀ Ránsẹ́'; delete btn.dataset.orig; } }, 5000);
   } catch { showErr($('verify-error'), 'Kò lè rànsẹ́. Gbìyànjú lẹ́ẹ̀kan sí i.'); setLoading(btn, false); }
+=======
+    setLoading(btn, false);
+    if (btn) btn.textContent = 'A ti fi ìmẹ̀lẹ̀ ránsẹ́ ✓';
+    setTimeout(() => { if (btn) btn.textContent = 'Tún Ìmẹ̀lẹ̀ Ránsẹ́'; }, 5000);
+  } catch (err) {
+    logger.warn('Verification email resend failed', err);
+    showErr($('verify-error'), yorubaErr(err.code));
+    setLoading(btn, false);
+  }
+>>>>>>> fix/master-upgrade-v2
 });
 
 $('check-verify-btn')?.addEventListener('click', async () => {
@@ -183,7 +301,16 @@ $('check-verify-btn')?.addEventListener('click', async () => {
   try {
     await reload(user);
     if (!user.emailVerified) { setLoading(btn, false); showErr($('verify-error'), 'Ìmẹ̀lẹ̀ kò tíì ṣàyẹ̀wò.'); }
+<<<<<<< HEAD
   } catch { setLoading(btn, false); showErr($('verify-error'), 'Àṣìṣe kan ṣẹlẹ̀. Gbìyànjú lẹ́ẹ̀kan sí i.'); }
+=======
+    else await handleAuthState(user);
+  } catch (err) {
+    logger.warn('Email verification check failed', err);
+    setLoading(btn, false);
+    showErr($('verify-error'), yorubaErr(err.code));
+  }
+>>>>>>> fix/master-upgrade-v2
 });
 
 $('verify-signout-btn')?.addEventListener('click', () => fbSignOut(auth));

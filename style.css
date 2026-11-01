@@ -118,7 +118,11 @@ body{font-family:var(--font-body);background:var(--ink);color:var(--white);
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── 4. App layout ─────────────────────────────────────────── */
+<<<<<<< HEAD
 #app-root{display:flex;height:100dvh;overflow:hidden;position:relative}
+=======
+#app-root{display:flex;height:100dvh;overflow:hidden;position:relative;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+>>>>>>> fix/master-upgrade-v2
 #app-root[hidden]{display:none}
 
 /* Sidebar */
@@ -276,7 +280,11 @@ body{font-family:var(--font-body);background:var(--ink);color:var(--white);
   transition:border-color var(--t-fast),box-shadow var(--t-fast)}
 .input-wrapper:focus-within{border-color:rgba(201,168,76,.4);box-shadow:0 0 0 3px rgba(201,168,76,.08)}
 .user-input{flex:1;background:none;border:none;color:var(--white);font:inherit;
+<<<<<<< HEAD
   font-size:.9rem;line-height:1.6;resize:none;min-height:24px;max-height:140px;padding:0}
+=======
+  font-size:1rem;line-height:1.6;resize:none;min-height:24px;max-height:140px;padding:0}
+>>>>>>> fix/master-upgrade-v2
 .user-input:focus{outline:none}
 .user-input::placeholder{color:rgba(255,255,255,.25)}
 .input-controls{display:flex;align-items:center;gap:var(--sp-2);flex-shrink:0}

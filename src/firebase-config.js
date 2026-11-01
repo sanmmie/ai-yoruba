@@ -17,6 +17,10 @@ import { getAuth, connectAuthEmulator }                     from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator,
          enableIndexedDbPersistence }                       from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator }           from 'firebase/functions';
+<<<<<<< HEAD
+=======
+import { getAnalytics, isSupported }                        from 'firebase/analytics';
+>>>>>>> fix/master-upgrade-v2
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -27,12 +31,43 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+<<<<<<< HEAD
+=======
+const missingConfig = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value || /^(your[-_]|AIzaSy\.\.\.)/i.test(value.trim()))
+  .map(([key]) => key);
+
+if (missingConfig.length > 0) {
+  throw new Error(
+    `[Firebase] Missing or placeholder config: ${missingConfig.join(', ')}. ` +
+    'Copy .env.example to .env.local, add your Firebase project values, and restart Vite.',
+  );
+}
+
+>>>>>>> fix/master-upgrade-v2
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const auth      = getAuth(app);
 export const db        = getFirestore(app);
 export const functions = getFunctions(app, 'us-central1');
 
+<<<<<<< HEAD
+=======
+export let analytics = null;
+const analyticsConsent = typeof localStorage !== 'undefined' ? localStorage.getItem('ygpt_analytics_consent') : null;
+if (analyticsConsent === 'granted') {
+  isSupported().then((supported) => {
+    if (supported) {
+      try {
+        analytics = getAnalytics(app);
+      } catch (e) {
+        // ignore
+      }
+    }
+  }).catch(() => {});
+}
+
+>>>>>>> fix/master-upgrade-v2
 if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === 'true') {
   connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, 'localhost', 8080);
