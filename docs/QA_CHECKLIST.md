@@ -4,6 +4,7 @@ Passed at 360px, light and dark, on Chrome Android and Safari iOS,
 including the consent, settings, delete and report flows.
 
 ## Boot
+
 - [ ] App boots with no Firebase initialisation errors (getApps().length === 1)
 - [ ] Console-clean login under a strict CSP (no CSP violation, no duplicate-app, no unauthorized-domain)
 - [ ] Sign-in screen links Privacy Policy and Terms
@@ -12,6 +13,7 @@ including the consent, settings, delete and report flows.
 - [ ] Footer shows the sensitive-details reminder in both languages
 
 ## Chat
+
 - [ ] Streaming works; deltas render on requestAnimationFrame
 - [ ] Typing indicator before the first token; caret during streaming
 - [ ] Stop keeps partial text and refunds quota exactly once
@@ -22,6 +24,7 @@ including the consent, settings, delete and report flows.
 - [ ] History loads server-side; the client sends only sessionId, message and clientRequestId
 
 ## Quota and limits
+
 - [ ] Free user cannot gain Premium
 - [ ] Free user cannot exceed the daily limit under parallel requests
 - [ ] Free user does not lose quota on a failed or aborted request
@@ -32,6 +35,7 @@ including the consent, settings, delete and report flows.
 - [ ] "N messages left today" shows from the server value
 
 ## Payments
+
 - [ ] Checkout shows price, currency, billing interval, renewal date, cancellation terms
 - [ ] Auto-renewal acknowledgement is unticked before checkout
 - [ ] Stripe and Flutterwave webhooks are verified, idempotent under concurrent replay, order-safe
@@ -39,6 +43,7 @@ including the consent, settings, delete and report flows.
 - [ ] The client never trusts the redirect query string (R12)
 
 ## Consent and privacy
+
 - [ ] No chat is possible without recorded Terms and Privacy consent and an 18+ declaration
 - [ ] Training use is a separate, default-off choice
 - [ ] Consent withdrawal works and blocks the next chat
@@ -47,6 +52,7 @@ including the consent, settings, delete and report flows.
 - [ ] No message content appears in logs, Sentry or analytics
 
 ## Mobile
+
 - [ ] 100dvh, viewport-fit=cover, safe-area insets
 - [ ] 360px minimum width
 - [ ] 44px touch targets
@@ -57,11 +63,13 @@ including the consent, settings, delete and report flows.
 - [ ] "Jump to latest" button appears when scrolled up
 
 ## Performance
+
 - [ ] Main chunk under 150 kB gzip
 - [ ] Markdown library and pricing page are code-split
 - [ ] Lighthouse mobile accessibility >= 95
 
 ## Accessibility
+
 - [ ] role="log" on the message list with aria-live only for finished messages
 - [ ] Visible focus rings
 - [ ] Focus trap and Esc in dialogs
@@ -69,6 +77,7 @@ including the consent, settings, delete and report flows.
 - [ ] Reduced motion honoured
 
 ## i18n
+
 - [ ] Yoruba/English toggle from the JSON files
 - [ ] Every src/i18n/yo.json value is reviewed by a native speaker or marked PENDING TRANSLATION
 - [ ] Every suspect string is listed in docs/YORUBA_COPY_REVIEW.md
