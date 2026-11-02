@@ -236,10 +236,12 @@ async function callAI(message, attempt = 0) {
         'Authorization': `Bearer ${token}`,
         'X-Requested-With': 'XMLHttpRequest',
       },
-      body: JSON.stringify({
-        message,
-        history: conversationHistory.slice(0, -1).map(({ role, content }) => ({ role, content })),
-      }),
+       body: JSON.stringify({
+         data: {
+           message,
+           history: conversationHistory.slice(0, -1).map(({ role, content }) => ({ role, content })),
+         },
+       }),
       signal: ctrl.signal,
     });
     clearTimeout(timer);
@@ -249,15 +251,17 @@ async function callAI(message, attempt = 0) {
       await new Promise(r => setTimeout(r, delay));
       return callAI(message, attempt + 1);
     }
-    if (!res.ok) {
-      const b = await res.json().catch(() => ({}));
-      if (res.status === 401) throw new AppError('Kò sí ìgbàláàyè. Jọ̀wọ́ wọlé lẹ́ẹ̀kan sí i.', 'UNAUTHORIZED');
-      if (res.status === 402) throw new AppError(MSG.UPGRADE, 'PAYMENT_REQUIRED');
-      if (res.status === 429) throw new AppError(b.error ?? MSG.RATE_LIMIT, 'RATE_LIMITED');
-      throw new AppError(b.error ?? MSG.GENERIC_ERR, `HTTP_${res.status}`);
-    }
-    const ct = res.headers.get('content-type') || '';
-    if (ct.includes('text/event-stream')) {
+     if (!res.ok) {
+       const text = await res.text();
+       let b = {};
+       try { b = text ? JSON.parse(text) : {}; } catch { b = {}; }
+       if (res.status === 401) throw new AppError('Kò sí ìgbàláàyè. Jọ̀wọ́ wọlé lẹ́ẹ̀kan sí i.', 'UNAUTHORIZED');
+       if (res.status === 402) throw new AppError(MSG.UPGRADE, 'PAYMENT_REQUIRED');
+       if (res.status === 429) throw new AppError(b.error?.message ?? b.error ?? MSG.RATE_LIMIT, 'RATE_LIMITED');
+       throw new AppError(b.error?.message ?? b.error ?? MSG.GENERIC_ERR, `HTTP_${res.status}`);
+     }
+     const ct = res.headers.get('content-type') || '';
+     if (ct.includes('text/event-stream')) {
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       let buf = '', full = '';
@@ -278,9 +282,13 @@ async function callAI(message, attempt = 0) {
       if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
       return full;
     }
-    const data = await res.json();
-    if (!data.response) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
-    return data.response;
+     const raw = await res.text();
+     let parsed;
+     try { parsed = raw ? JSON.parse(raw) : {}; } catch { throw new AppError(MSG.GENERIC_ERR, 'PARSE_ERROR'); }
+     const data = parsed?.result?.data ?? parsed?.data ?? parsed ?? {};
+     if (parsed?.error) throw new AppError(parsed.error?.message ?? MSG.GENERIC_ERR, 'BACKEND_ERROR');
+     if (!data.response) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
+     return data.response;
   } catch (err) {
     clearTimeout(timer);
     if (err.name === 'AbortError') throw new AppError(MSG.TIMEOUT, 'TIMEOUT');
