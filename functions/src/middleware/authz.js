@@ -16,7 +16,7 @@ async function verifyConsent(uid) {
   const db = admin.firestore();
   const policy = process.env.POLICY_VERSION || 'VERIFY';
   const types = ['terms_privacy', 'age_18'];
-  const snaps = await Promise.all(types.map(t => db.doc(users//consents/).get()));
+  const snaps = await Promise.all(types.map(t => db.doc(`users/${uid}/consents/${t}`).get()));
   return snaps.every(s => {
     if (!s.exists) return false;
     const d = s.data();

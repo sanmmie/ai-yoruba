@@ -20,7 +20,7 @@ exports.consentFunctions = functions
 
         if (action === 'verify') {
           const types = ['terms_privacy', 'age_18'];
-          const snaps = await Promise.all(types.map(t => db.doc(users//consents/).get()));
+          const snaps = await Promise.all(types.map(t => db.doc(`users/${uid}/consents/${t}`).get()));
           const ok = snaps.every(s => {
             if (!s.exists) return false;
             const d = s.data();
@@ -32,7 +32,7 @@ exports.consentFunctions = functions
         if (action === 'record') {
           const allowed = ['terms_privacy', 'age_18', 'training', 'analytics'];
           if (!allowed.includes(type)) return res.status(400).json({ error: 'invalid_type' });
-          const ref = db.doc(users//consents/);
+          const ref = db.doc(`users/${uid}/consents/${type}`);
           await db.runTransaction(async (tx) => {
             const snap = await tx.get(ref);
             if (snap.exists && snap.data().granted === granted) return;
@@ -49,7 +49,7 @@ exports.consentFunctions = functions
         }
 
         if (action === 'list') {
-          const snap = await db.collection(users//consents).get();
+          const snap = await db.collection(`users/${uid}/consents`).get();
           const consents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           return res.json({ consents });
         }
@@ -57,7 +57,7 @@ exports.consentFunctions = functions
         if (action === 'withdraw') {
           const allowed = ['terms_privacy', 'age_18', 'training', 'analytics'];
           if (!allowed.includes(type)) return res.status(400).json({ error: 'invalid_type' });
-          const ref = db.doc(users//consents/);
+          const ref = db.doc(`users/${uid}/consents/${type}`);
           await ref.set({ withdrawnAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
           return res.json({ ok: true });
         }

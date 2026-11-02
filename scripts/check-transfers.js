@@ -55,7 +55,7 @@ const headers = hosting.headers || [];
 const csp = headers.find(h => (h.headers || []).some(x => x.key === 'Content-Security-Policy'));
 const cspValue = csp ? csp.headers.find(x => x.key === 'Content-Security-Policy').value : '';
 
-const hosts = [...cspValue.matchAll(/https?:\/\/[^\s"']+g)].map(m => m[0].toLowerCase());
+const hosts = [...cspValue.matchAll(/https?:\/\/[^\s"']+/g)].map(m => m[0].toLowerCase());
 for (const host of hosts) {
   if (host.includes('ai-yoruba.web.app') || host.includes('ai-yoruba.firebaseapp.com') || host.includes('localhost')) continue;
   if (host.includes('google') || host.includes('firebase') || host.includes('stripe') || host.includes('flutterwave') || host.includes('anthropic') || host.includes('sentry') || host.includes('recaptcha') || host.includes('gstatic') || host.includes('googleapis')) continue;

@@ -14,7 +14,7 @@ async function run() {
     for (const s of sessionsSnap.docs) {
       const data = s.data() || {};
       if (Array.isArray(data.history) && data.history.length > 0) {
-        console.log(would migrate / history entries: );
+        console.log(`would migrate ${uid}/${s.id} history entries: ${data.history.length}`);
         if (!dryRun) {
           // conversion logic would go here
         }

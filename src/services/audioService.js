@@ -15,7 +15,7 @@ export async function sendAudioToSTT(audioBlob) {
       const base64Data = reader.result.split(',')[1];
 
       try {
-        const response = await fetch(${FUNCTIONS_BASE_URL}/transcribeYorubaAudio, {
+        const response = await fetch(`${FUNCTIONS_BASE_URL}/transcribeYorubaAudio`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ audioBase64: base64Data })
@@ -35,7 +35,7 @@ export async function sendAudioToSTT(audioBlob) {
  */
 export async function playYorubaVoice(textWithDiacritics) {
   try {
-    const response = await fetch(${FUNCTIONS_BASE_URL}/synthesizeYorubaVoice, {
+    const response = await fetch(`${FUNCTIONS_BASE_URL}/synthesizeYorubaVoice`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: textWithDiacritics })
@@ -43,7 +43,7 @@ export async function playYorubaVoice(textWithDiacritics) {
     
     const data = await response.json();
     if (data.audioContent) {
-      const audioSource = data:audio/mp3;base64,;
+      const audioSource = `data:audio/mp3;base64,${data.audioContent}`;
       const audio = new Audio(audioSource);
       await audio.play();
     }

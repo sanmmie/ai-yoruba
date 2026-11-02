@@ -5,12 +5,8 @@ const { plans } = require('../config/plans');
 
 function getLagosDateKey() {
   const now = new Date();
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const lagos = new Date(utc + (1 * 3600000));
-  const y = lagos.getFullYear();
-  const m = String(lagos.getMonth() + 1).padStart(2, '0');
-  const d = String(lagos.getDate()).padStart(2, '0');
-  return ${y};
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' });
+  return fmt.format(now);
 }
 
 function hashIp(ip) {
@@ -24,8 +20,8 @@ async function checkRateLimits({ uid, req, plan }) {
   const cfg = plans[plan] || plans.free;
   const dailyLimit = cfg.dailyLimit;
   const dateKey = getLagosDateKey();
-  const usageRef = db.collection('usage').doc(${uid}_);
-  const requestId = eq__;
+  const usageRef = db.collection('usage').doc(`${uid}_${dateKey}`);
+  const requestId = `req_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const reservationRef = db.collection('reservations').doc(requestId);
 
   try {
@@ -52,7 +48,7 @@ async function refundReservation({ uid, reservationId, success }) {
   const db = admin.firestore();
   const reservationRef = db.collection('reservations').doc(reservationId);
   const dateKey = getLagosDateKey();
-  const usageRef = db.collection('usage').doc(${uid}_);
+  const usageRef = db.collection('usage').doc(`${uid}_${dateKey}`);
   await db.runTransaction(async (tx) => {
     const rSnap = await tx.get(reservationRef);
     if (!rSnap.exists) return;
