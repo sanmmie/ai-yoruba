@@ -282,13 +282,33 @@ async function callAI(message, attempt = 0) {
       if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
       return full;
     }
+     const diagRes = res.clone();
+     const diagText = await diagRes.text().catch(() => '');
+     logger.info('AI response diagnostics', {
+       url: endpoint.includes('/chat/stream') ? endpoint : API_ENDPOINT,
+       status: res.status,
+       statusText: res.statusText,
+       contentType: ct,
+       contentLength: res.headers.get('content-length'),
+       bodyLength: diagText.length,
+       preview: diagText.slice(0, 200).replace(/[\\r\\n]+/g, ' '),
+       correlationId: res.headers.get('x-correlation-id') || res.headers.get('x-request-id') || null,
+     });
      const raw = await res.text();
+     if (!raw || !raw.trim()) {
+       throw new AppError(MSG.GENERIC_ERR, 'EMPTY_RESPONSE');
+     }
+     const trimmed = raw.trim();
+     const isHtml = ct.includes('text/html') || /^<!DOCTYPE html/i.test(trimmed) || /^<html/i.test(trimmed);
+     if (isHtml) {
+       throw new AppError(MSG.GENERIC_ERR, 'HTML_RESPONSE');
+     }
      let parsed;
-     try { parsed = raw ? JSON.parse(raw) : {}; } catch { throw new AppError(MSG.GENERIC_ERR, 'PARSE_ERROR'); }
-     const data = parsed?.result?.data ?? parsed?.data ?? parsed ?? {};
+     try { parsed = JSON.parse(trimmed); } catch { throw new AppError(MSG.GENERIC_ERR, 'PARSE_ERROR'); }
      if (parsed?.error) throw new AppError(parsed.error?.message ?? MSG.GENERIC_ERR, 'BACKEND_ERROR');
-     if (!data.response) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
-     return data.response;
+     const reply = parsed?.result?.response ?? parsed?.response ?? parsed?.data ?? null;
+     if (!reply) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
+     return reply;
   } catch (err) {
     clearTimeout(timer);
     if (err.name === 'AbortError') throw new AppError(MSG.TIMEOUT, 'TIMEOUT');
