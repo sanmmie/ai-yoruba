@@ -26,6 +26,7 @@ import {
 import { Modal }                              from './modules/modal.js';
 import { subscribeToSubscription, startCheckout } from './modules/paymentService.js';
 import { logger }                             from './utils/logger.js';
+import { renderMarkdown }                      from './ui/messages.js';
 
 // ── Constants ─────────────────────────────────────────────────
 const API_ENDPOINT = import.meta.env.VITE_AI_ENDPOINT ?? 'https://us-central1-ai-yoruba.cloudfunctions.net/yorubaAI';
@@ -114,6 +115,22 @@ function addMessage(content, isUser, timestamp = null) {
   time.textContent = timestamp ?? fmtTime();
 
   wrap.appendChild(bubble); wrap.appendChild(time);
+  d.chatMessages.appendChild(wrap);
+  d.chatMessages.scrollTop = d.chatMessages.scrollHeight;
+}
+
+function addAssistantMessage(content, timestamp) {
+  const d = D();
+  const wrap = document.createElement('div');
+  wrap.className = 'message bot-message';
+  wrap.setAttribute('role', 'article');
+  const body = document.createElement('div');
+  body.className = 'message-content';
+  body.appendChild(renderMarkdown(content));
+  const time = document.createElement('div');
+  time.className = 'message-time';
+  time.textContent = timestamp ?? fmtTime();
+  wrap.appendChild(body); wrap.appendChild(time);
   d.chatMessages.appendChild(wrap);
   d.chatMessages.scrollTop = d.chatMessages.scrollHeight;
 }
@@ -276,7 +293,7 @@ async function sendMessage() {
     const response = await callAI(message);
     removeTypingIndicator();
     const rts = fmtTime();
-    addMessage(response, false, rts);
+    addAssistantMessage(response, rts);
     conversationHistory.push({ role:'assistant', content:response, timestamp:rts });
     bumpDaily();
 
