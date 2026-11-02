@@ -1,19 +1,30 @@
-'use strict';
+﻿'use strict';
 
-/**
- * src/ui/settings.js
- *
- * Settings → Privacy & data dialog.
- *
- *  - Current consents with toggles for analytics and training (OFF by
- *    default).
- *  - Retention period (within bounds the user approves).
- *  - Download my data, delete all chats, delete my account.
- *  - Delete is hard deletion, idempotent and resumable (R9).
- */
 import { t } from '../i18n/i18n.js';
 import { Modal } from '../modal.js';
 import { toast } from './toast.js';
+import { auth } from '../firebase-config.js';
+
+const CONSENT_URL = 'https://us-central1-ai-yoruba.cloudfunctions.net/consentFunctions';
+
+async function callConsent(action, data = {}) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('unauthenticated');
+  const token = await user.getIdToken();
+  const res = await fetch(CONSENT_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({ action, ...data })
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || ('consent_error_' + res.status));
+  }
+  return res.json();
+}
 
 async function call(action, data) {
   const { getFunctions, httpsCallable } = await import('firebase/functions');
@@ -26,17 +37,17 @@ async function call(action, data) {
 export async function openSettings({ uid: _uid, plan: _plan, consents: _consents, retention: _retention, onDeleteAccount }) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.innerHTML = `
+  overlay.innerHTML = 
     <div class="modal-card modal-card--wide" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <h2 id="settings-title">${t('settings.title')}</h2>
+      <h2 id="settings-title"></h2>
 
       <section class="settings-section">
-        <h3>${t('settings.privacyData')}</h3>
+        <h3></h3>
         <div id="settings-consents" class="settings-consents"></div>
         <label class="settings-row">
-          <span>${t('settings.retention')}</span>
+          <span></span>
           <select id="settings-retention" class="form-field-input">
-            <option value="7">${t('settings.retention')} 7</option>
+            <option value="7"> 7</option>
             <option value="30" selected>30</option>
             <option value="90">90</option>
             <option value="365">365</option>
@@ -47,9 +58,9 @@ export async function openSettings({ uid: _uid, plan: _plan, consents: _consents
       <section class="settings-section">
         <h3>Data</h3>
         <div class="settings-actions">
-          <button id="settings-download" class="auth-secondary-btn" type="button">${t('settings.downloadData')}</button>
-          <button id="settings-delete-chats" class="auth-secondary-btn" type="button">${t('settings.deleteAllChats')}</button>
-          <button id="settings-delete-account" class="auth-secondary-btn danger" type="button">${t('settings.deleteAccount')}</button>
+          <button id="settings-download" class="auth-secondary-btn" type="button"></button>
+          <button id="settings-delete-chats" class="auth-secondary-btn" type="button"></button>
+          <button id="settings-delete-account" class="auth-secondary-btn danger" type="button"></button>
         </div>
       </section>
 
@@ -57,11 +68,11 @@ export async function openSettings({ uid: _uid, plan: _plan, consents: _consents
       <div class="modal-actions">
         <button id="settings-close" class="auth-secondary-btn" type="button">Close</button>
       </div>
-    </div>`;
+    </div>;
   document.body.appendChild(overlay);
 
   const consentsEl = overlay.querySelector('#settings-consents');
-  const list = await call('consentFunctions', { action: 'list' });
+  const list = await callConsent('list');
   for (const c of (list.consents || [])) {
     const row = document.createElement('div');
     row.className = 'settings-consent';
@@ -73,7 +84,7 @@ export async function openSettings({ uid: _uid, plan: _plan, consents: _consents
     toggle.disabled = c.type === 'terms_privacy' || c.type === 'age_18';
     toggle.addEventListener('change', async () => {
       try {
-        await call('consentFunctions', { action: 'record', type: c.type, granted: toggle.checked });
+        await callConsent('record', { type: c.type, granted: toggle.checked });
       } catch (e) {
         toggle.checked = !toggle.checked;
         const err = overlay.querySelector('#settings-error');
@@ -85,52 +96,41 @@ export async function openSettings({ uid: _uid, plan: _plan, consents: _consents
     consentsEl.appendChild(row);
   }
 
+  overlay.querySelector('#settings-close')?.addEventListener('click', () => overlay.remove());
   overlay.querySelector('#settings-download')?.addEventListener('click', async () => {
     try {
-      const data = await call('exportFunctions', {});
+      const data = await call('exportUserData', {});
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `yorubagpt-data-${uid.slice(0, 8)}.json`;
+      a.download = yorubagpt-data-.json;
       a.click();
       URL.revokeObjectURL(url);
-      toast(t('settings.dataExported'), { type: 'success' });
+      toast('Downloaded');
     } catch (e) {
       const err = overlay.querySelector('#settings-error');
       if (err) { err.textContent = t('errors.generic'); err.classList.add('visible'); }
     }
   });
-
   overlay.querySelector('#settings-delete-chats')?.addEventListener('click', async () => {
-    const ok = await Modal.confirm(t('settings.deleteAllChatsConfirm'), { danger: true });
-    if (!ok) return;
+    if (!confirm('Delete all chats?')) return;
     try {
-      await call('deletionFunctions', { action: 'delete_all_chats' });
-      toast(t('settings.chatsDeleted'), { type: 'success' });
+      await call('deleteUserData', { scope: 'chats' });
+      toast('Chats deleted');
     } catch (e) {
       const err = overlay.querySelector('#settings-error');
       if (err) { err.textContent = t('errors.generic'); err.classList.add('visible'); }
     }
   });
-
   overlay.querySelector('#settings-delete-account')?.addEventListener('click', async () => {
-    const ok = await Modal.confirm(t('settings.deleteAccountConfirm'), { danger: true });
-    if (!ok) return;
+    if (!confirm('Delete account and all data? This cannot be undone.')) return;
     try {
-      await call('deletionFunctions', { action: 'delete_account' });
-      toast(t('settings.accountDeleted'), { type: 'success' });
       await onDeleteAccount?.();
+      overlay.remove();
     } catch (e) {
       const err = overlay.querySelector('#settings-error');
       if (err) { err.textContent = t('errors.generic'); err.classList.add('visible'); }
     }
   });
-
-  overlay.querySelector('#settings-close')?.addEventListener('click', () => overlay.remove());
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  document.addEventListener('keydown', function handler(e) {
-    if (e.key === 'Escape') { document.removeEventListener('keydown', handler); overlay.remove(); }
-  }, { once: true });
-  overlay.querySelector('#settings-close')?.focus();
 }
