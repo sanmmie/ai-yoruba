@@ -15,7 +15,7 @@ function hashIp(ip) {
   return crypto.createHash('sha256').update(salt + ip).digest('hex').slice(0, 16);
 }
 
-async function checkRateLimits({ uid, req, plan }) {
+async function checkRateLimits({ uid, req: _req, plan }) {
   const db = admin.firestore();
   const cfg = plans[plan] || plans.free;
   const dailyLimit = cfg.dailyLimit;

@@ -1,7 +1,6 @@
 'use strict';
 const admin = require('firebase-admin');
 const { checkRateLimits } = require('../middleware/rateLimit');
-const { plans } = require('../config/plans');
 
 const ERR = {
   unauthenticated: { code: 'unauthenticated', message: 'Authentication required.' },
@@ -20,11 +19,11 @@ async function verifyConsent(uid) {
   return snaps.every(s => {
     if (!s.exists) return false;
     const d = s.data();
-    return d.granted === true && d.withdrawnAt == null && (d.policyVersion === policy || policy === 'VERIFY');
+    return d.granted === true && d.withdrawnAt === null && (d.policyVersion === policy || policy === 'VERIFY');
   });
 }
 
-async function authorize(req, { sessionId, requestId, streamId } = {}) {
+async function authorize(req, { sessionId: _sessionId, requestId: _requestId, streamId: _streamId } = {}) {
   const authHeader = req.headers.authorization || '';
   if (!authHeader.startsWith('Bearer ')) {
     const e = new Error('unauthenticated');

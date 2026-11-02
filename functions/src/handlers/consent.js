@@ -24,7 +24,7 @@ exports.consentFunctions = functions
           const ok = snaps.every(s => {
             if (!s.exists) return false;
             const d = s.data();
-            return d.granted === true && d.withdrawnAt == null && (d.policyVersion === POLICY_VERSION || POLICY_VERSION === 'VERIFY');
+            return d.granted === true && d.withdrawnAt === null && (d.policyVersion === POLICY_VERSION || POLICY_VERSION === 'VERIFY');
           });
           return res.json({ ok });
         }
