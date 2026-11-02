@@ -7,6 +7,9 @@ const $ = id => document.getElementById(id);
 const CONSENT_URL =
   'https://us-central1-ai-yoruba.cloudfunctions.net/consentFunctions';
 
+/**
+ * Send an authenticated request to the consent Cloud Function.
+ */
 async function callConsent(action, data = {}) {
   const user = auth.currentUser;
 
@@ -20,62 +23,110 @@ async function callConsent(action, data = {}) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
+      Authorization: `Bearer ${token}`
     },
-    body: JSON.stringify({ action, ...data })
+    body: JSON.stringify({
+      action,
+      ...data
+    })
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || ('consent_error_' + res.status));
+  let result;
+
+  try {
+    result = await res.json();
+  } catch {
+    throw new Error(
+      `Invalid consent service response (HTTP ${res.status})`
+    );
   }
 
-  return res.json();
+  if (!res.ok) {
+    throw new Error(
+      result?.error ||
+      result?.message ||
+      `consent_error_${res.status}`
+    );
+  }
+
+  return result;
 }
 
+/**
+ * Mount the consent gate.
+ *
+ * Returns true when mounted.
+ * Throws when the required HTML element is missing.
+ */
 export function mountConsentGate(onReady) {
-  const gate = document.getElementById('consent-gate');
+  const gate = $('consent-gate');
 
-  if (!gate) return;
+  if (!gate) {
+    throw new Error(
+      'Missing #consent-gate element in index.html'
+    );
+  }
+
+  renderConsentGate();
 
   gate.hidden = false;
 
-  renderConsentGate();
   wireConsentGate(onReady);
+
+  return true;
 }
 
+/**
+ * Render the consent interface.
+ */
 function renderConsentGate() {
-  const gate = document.getElementById('consent-gate');
+  const gate = $('consent-gate');
 
-  if (!gate) return;
+  if (!gate) {
+    throw new Error('Consent gate element not found.');
+  }
 
-  gate.innerHTML = '';
+  gate.replaceChildren();
 
   const card = document.createElement('div');
   card.className = 'consent-card';
 
   card.innerHTML = `
-    <h2>${t('consent.title')}</h2>
+    <h2 id="consent-dialog-title">${t('consent.title')}</h2>
 
     <p class="consent-sub">${t('consent.termsPrivacy')}</p>
 
     <label class="consent-check">
-      <input type="checkbox" id="consent-terms" />
+      <input
+        type="checkbox"
+        id="consent-terms"
+        required
+      />
       <span>${t('consent.termsPrivacy')}</span>
     </label>
 
     <label class="consent-check">
-      <input type="checkbox" id="consent-age" />
+      <input
+        type="checkbox"
+        id="consent-age"
+        required
+      />
       <span>${t('consent.age18')}</span>
     </label>
 
     <label class="consent-check consent-optional">
-      <input type="checkbox" id="consent-training" />
+      <input
+        type="checkbox"
+        id="consent-training"
+      />
       <span>${t('consent.training')}</span>
     </label>
 
     <label class="consent-check consent-optional">
-      <input type="checkbox" id="consent-analytics" />
+      <input
+        type="checkbox"
+        id="consent-analytics"
+      />
       <span>${t('consent.analytics')}</span>
     </label>
 
@@ -84,6 +135,7 @@ function renderConsentGate() {
       class="auth-error"
       role="alert"
       aria-live="assertive"
+      hidden
     ></div>
 
     <button
@@ -96,13 +148,15 @@ function renderConsentGate() {
 
   gate.appendChild(card);
 
-  const terms = document.getElementById('consent-terms');
-  const age = document.getElementById('consent-age');
-  const continueBtn = document.getElementById('consent-continue');
+  const terms = $('consent-terms');
+  const age = $('consent-age');
+  const continueBtn = $('consent-continue');
 
   const update = () => {
     if (continueBtn) {
-      continueBtn.disabled = !(terms?.checked && age?.checked);
+      continueBtn.disabled = !(
+        terms?.checked && age?.checked
+      );
     }
   };
 
@@ -110,97 +164,173 @@ function renderConsentGate() {
   age?.addEventListener('change', update);
 }
 
-function wireConsentGate(onReady) {
-  const btn = document.getElementById('consent-continue');
-  const err = document.getElementById('consent-error');
+/**
+ * Display an error message.
+ */
+function showError(element, message) {
+  if (!element) return;
 
-  btn?.addEventListener('click', async () => {
-    if (btn) btn.disabled = true;
+  element.textContent = message;
+  element.hidden = false;
+  element.classList.add('visible');
+}
+
+/**
+ * Clear the consent error.
+ */
+function clearError(element) {
+  if (!element) return;
+
+  element.textContent = '';
+  element.hidden = true;
+  element.classList.remove('visible');
+}
+
+/**
+ * Handle consent submission.
+ */
+function wireConsentGate(onReady) {
+  const btn = $('consent-continue');
+  const err = $('consent-error');
+
+  if (!btn) {
+    throw new Error('Consent submit button not found.');
+  }
+
+  btn.addEventListener('click', async () => {
+    clearError(err);
+
+    const termsAccepted = $('consent-terms')?.checked === true;
+    const ageConfirmed = $('consent-age')?.checked === true;
+
+    if (!termsAccepted || !ageConfirmed) {
+      showError(
+        err,
+        t('consent.declineMessage')
+      );
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
 
     try {
-      const user = auth.currentUser;
-
-      if (!user) {
-        if (err) {
-          err.textContent = t('errors.unauthenticated');
-          err.classList.add('visible');
-        }
-
-        if (btn) btn.disabled = false;
-        return;
+      if (!auth.currentUser) {
+        throw new Error('unauthenticated');
       }
 
-      const locale = localStorage.getItem('ygpt_locale') || 'en';
+      const locale =
+        localStorage.getItem('ygpt_locale') || 'en';
 
-      await callConsent('record', {
-        type: 'terms_privacy',
-        granted: document.getElementById('consent-terms')?.checked,
-        locale
-      });
-
-      await callConsent('record', {
-        type: 'age_18',
-        granted: document.getElementById('consent-age')?.checked,
-        locale
-      });
-
-      await callConsent('record', {
-        type: 'training',
-        granted: document.getElementById('consent-training')?.checked,
-        locale
-      });
-
-      await callConsent('record', {
-        type: 'analytics',
-        granted: document.getElementById('consent-analytics')?.checked,
-        locale
-      });
-
-      const verify = await callConsent('verify');
-
-      if (!verify.ok) {
-        if (err) {
-          err.textContent = t('consent.declineMessage');
-          err.classList.add('visible');
+      const consents = [
+        {
+          type: 'terms_privacy',
+          granted: termsAccepted,
+          locale
+        },
+        {
+          type: 'age_18',
+          granted: ageConfirmed,
+          locale
+        },
+        {
+          type: 'training',
+          granted: $('consent-training')?.checked === true,
+          locale
+        },
+        {
+          type: 'analytics',
+          granted: $('consent-analytics')?.checked === true,
+          locale
         }
+      ];
 
-        if (btn) btn.disabled = false;
-        return;
+      // Record each consent using the existing backend contract.
+      for (const consent of consents) {
+        await callConsent('record', consent);
       }
 
-      const gate = document.getElementById('consent-gate');
+      // Verify required consent with the backend.
+      const verification = await callConsent('verify');
 
-      if (gate) gate.remove();
+      if (verification?.ok !== true) {
+        throw new Error('consent_verification_failed');
+      }
 
-      onReady?.();
+      // Save optional analytics preference locally.
+      const analyticsAccepted =
+        $('consent-analytics')?.checked === true;
+
+      if (analyticsAccepted) {
+        localStorage.setItem(
+          'ygpt_analytics_consent',
+          'granted'
+        );
+      } else {
+        localStorage.removeItem(
+          'ygpt_analytics_consent'
+        );
+      }
+
+      // Initialize the application before removing the gate.
+      if (typeof onReady === 'function') {
+        await onReady();
+      }
+
+      const gate = $('consent-gate');
+
+      if (gate) {
+        gate.hidden = true;
+      }
 
     } catch (e) {
       console.error('Consent submission failed:', e);
 
-      if (err) {
-        err.textContent = t('errors.generic');
-        err.classList.add('visible');
-      }
+      showError(
+        err,
+        e?.message === 'unauthenticated'
+          ? t('errors.unauthenticated')
+          : t('errors.generic')
+      );
 
-      if (btn) btn.disabled = false;
+      btn.disabled = false;
+      btn.textContent = 'Continue';
     }
   });
 }
 
+/**
+ * Verify whether required consent already exists.
+ *
+ * Returns false only when the backend confirms
+ * that consent is incomplete.
+ *
+ * Network and server errors propagate to auth.js.
+ */
 export async function ensureConsented() {
-  try {
-    const r = await callConsent('verify');
-    return Boolean(r.ok);
-  } catch {
-    return false;
-  }
+  const result = await callConsent('verify');
+
+  return result?.ok === true;
 }
 
+/**
+ * Retrieve previously recorded consent.
+ */
 export async function listConsents() {
-  try {
-    const r = await callConsent('list');
-    return r.consents || [];
-  } catch {
-    return [];
+  const result = await callConsent('list');
+
+  return Array.isArray(result?.consents)
+    ? result.consents
+    : [];
+}
+
+/**
+ * Hide the consent gate without removing it.
+ */
+export function hideConsentGate() {
+  const gate = $('consent-gate');
+
+  if (gate) {
+    gate.hidden = true;
   }
 }
