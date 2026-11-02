@@ -16,6 +16,7 @@
  */
 
 import { auth }  from './firebase-config.js';
+import { streamChat, newRequestId } from './api/stream.js';
 import {
   subscribeToSessions, teardownSubscription,
   loadSessions, getCache,
@@ -222,97 +223,29 @@ async function handleDelete(id) {
 
 // ── AI call ───────────────────────────────────────────────────
 async function callAI(message, attempt = 0) {
-  const token = await auth.currentUser.getIdToken(false);
-  const ctrl  = new AbortController();
+  const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 45000);
+  let full = '';
   try {
-    const endpoint = import.meta.env.VITE_AI_STREAM_ENDPOINT
-      ? API_ENDPOINT.replace('/yorubaAI', '/yorubaAIv2/chat/stream')
-      : API_ENDPOINT;
-    const res = await fetch(endpoint.includes('/chat/stream') ? endpoint : API_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-       body: JSON.stringify({
-         data: {
-           message,
-           history: conversationHistory.slice(0, -1).map(({ role, content }) => ({ role, content })),
-         },
-       }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(timer);
-    if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
-      const delay = Math.pow(2, attempt) * 1000 + Math.random() * 500;
-      logger.warn(`AI ${res.status}, retry in ${delay|0}ms`, null, { attempt });
-      await new Promise(r => setTimeout(r, delay));
-      return callAI(message, attempt + 1);
-    }
-     if (!res.ok) {
-       const text = await res.text();
-       let b = {};
-       try { b = text ? JSON.parse(text) : {}; } catch { b = {}; }
-       if (res.status === 401) throw new AppError('Kò sí ìgbàláàyè. Jọ̀wọ́ wọlé lẹ́ẹ̀kan sí i.', 'UNAUTHORIZED');
-       if (res.status === 402) throw new AppError(MSG.UPGRADE, 'PAYMENT_REQUIRED');
-       if (res.status === 429) throw new AppError(b.error?.message ?? b.error ?? MSG.RATE_LIMIT, 'RATE_LIMITED');
-       throw new AppError(b.error?.message ?? b.error ?? MSG.GENERIC_ERR, `HTTP_${res.status}`);
-     }
-     const ct = res.headers.get('content-type') || '';
-     if (ct.includes('text/event-stream')) {
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      let buf = '', full = '';
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const parts = buf.split('\n\n');
-        buf = parts.pop() || '';
-        for (const part of parts) {
-          if (!part.includes('data: ')) continue;
-          try {
-            const d = JSON.parse(part.split('data: ')[1]);
-            if (d.text) full += d.text;
-          } catch {}
-        }
+    await streamChat(
+      { sessionId: activeSessionId, message, clientRequestId: newRequestId() },
+      {
+        onDelta: (t) => { full += t || ''; },
+        onDone: () => {},
+        onError: (e) => { throw new AppError(e?.message || MSG.GENERIC_ERR, 'BACKEND_ERROR'); },
+        signal: ctrl.signal,
       }
-      if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
-      return full;
-    }
-     const diagRes = res.clone();
-     const diagText = await diagRes.text().catch(() => '');
-     logger.info('AI response diagnostics', {
-       url: endpoint.includes('/chat/stream') ? endpoint : API_ENDPOINT,
-       status: res.status,
-       statusText: res.statusText,
-       contentType: ct,
-       contentLength: res.headers.get('content-length'),
-       bodyLength: diagText.length,
-       preview: diagText.slice(0, 200).replace(/[\\r\\n]+/g, ' '),
-       correlationId: res.headers.get('x-correlation-id') || res.headers.get('x-request-id') || null,
-     });
-     const raw = await res.text();
-     if (!raw || !raw.trim()) {
-       throw new AppError(MSG.GENERIC_ERR, 'EMPTY_RESPONSE');
-     }
-     const trimmed = raw.trim();
-     const isHtml = ct.includes('text/html') || /^<!DOCTYPE html/i.test(trimmed) || /^<html/i.test(trimmed);
-     if (isHtml) {
-       throw new AppError(MSG.GENERIC_ERR, 'HTML_RESPONSE');
-     }
-     let parsed;
-     try { parsed = JSON.parse(trimmed); } catch { throw new AppError(MSG.GENERIC_ERR, 'PARSE_ERROR'); }
-     if (parsed?.error) throw new AppError(parsed.error?.message ?? MSG.GENERIC_ERR, 'BACKEND_ERROR');
-     const reply = parsed?.result?.response ?? parsed?.response ?? parsed?.data ?? null;
-     if (!reply) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
-     return reply;
+    );
+    clearTimeout(timer);
+    if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
+    return full;
   } catch (err) {
     clearTimeout(timer);
-    if (err.name === 'AbortError') throw new AppError(MSG.TIMEOUT, 'TIMEOUT');
-    throw err;
+    if (err?.name === 'AbortError') throw new AppError(MSG.TIMEOUT, 'TIMEOUT');
+    if (err?.code === 'unauthenticated') throw new AppError('KÃ² sÃ­ Ã¬gbÃ lÃ¡Ã yÃ¨. Já»Ì€wá»Ì wá»lÃ© láº¹Ìáº¹Ì€kan sÃ­ i.', 'UNAUTHORIZED');
+    if (err?.code === 'resource-exhausted') throw new AppError(MSG.RATE_LIMIT, 'RATE_LIMITED');
+    if (err instanceof AppError) throw err;
+    throw new AppError(err?.message || MSG.GENERIC_ERR, 'STREAM_ERROR');
   }
 }
 
