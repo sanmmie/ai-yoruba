@@ -1,16 +1,8 @@
-{
+﻿{
   "projects": {
-<<<<<<< HEAD
-    "yorubagpt-prod": "ai-yoruba"
-  },
-  "targets": {},
-  "etags": {}
-}
-=======
     "yorubagpt-prod": "ai-yoruba",
     "default": "ai-yoruba"
   },
   "targets": {},
   "etags": {}
 }
->>>>>>> fix/master-upgrade-v2
