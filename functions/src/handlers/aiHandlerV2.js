@@ -30,6 +30,32 @@ async function handleChatStream(req, res) {
   const requestId = req.body?.clientRequestId || `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const streamId = `stream_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   let auth = null;
+  let headersSent = false;
+
+  function openSSE() {
+    if (headersSent) return;
+    headersSent = true;
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.write(': ping\n\n');
+  }
+
+  function sendSSEError(code, message, extra = {}) {
+    if (!headersSent) {
+      // Fast-path: reject before any slow work with a JSON body so the
+      // client never waits for the stream timeout.
+      const status = code === 'unauthenticated' ? 401
+        : code === 'consent_required' ? 403
+        : code === 'rate_limited' || code === 'quota_exceeded' ? 429
+        : 400;
+      return res.status(status).json({ error: { code, message, ...extra } });
+    }
+    res.write(`event: error\ndata: ${JSON.stringify({ code, message, ...extra })}\n\n`);
+    return res.end();
+  }
+
   try {
     const { sessionId, message, mode: _mode, regenerate: _regenerate, expectedLastMessageId: _expected } = req.body || {};
     if (typeof message !== 'string' || !message.trim()) {
@@ -43,14 +69,12 @@ async function handleChatStream(req, res) {
       return res.status(400).json({ error: ERR.invalid_argument });
     }
 
+    // Open the stream BEFORE any slow Firestore / auth work so the client
+    // receives the first byte immediately (or a fast structured error).
+    openSSE();
+
     auth = await authorize(req, { sessionId, requestId, streamId });
     const { uid, plan } = auth;
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache, no-transform');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-    res.write(': ping\n\n');
 
     const db = admin.firestore();
     let history = [];
@@ -68,8 +92,7 @@ async function handleChatStream(req, res) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       await settle(auth, { success: false, requestId });
-      res.write(`event: error\ndata: ${JSON.stringify({ code: 'config', message: 'missing key' })}\n\n`);
-      return res.end();
+      return sendSSEError('config', 'missing key');
     }
 
     const cfg = plans[plan] || plans.free;
@@ -128,27 +151,22 @@ async function handleChatStream(req, res) {
         });
       }
 
-exports.yorubaAIv2 = functions
-  .runWith({ timeoutSeconds: 300, memory: '512MB', minInstances: 1, maxInstances: 20, secrets: ['ANTHROPIC_API_KEY'] })
-  .https.onRequest(app);
-
       await settle(auth, { success: true, requestId });
       res.write(`event: done\ndata: ${JSON.stringify({ messageId, remaining: auth.quota.remaining, limit: auth.quota.limit })}\n\n`);
       return res.end();
     } catch (err) {
       log.error('Anthropic stream failed', err, { uid });
       await settle(auth, { success: false, requestId });
-      if (!res.headersSent) {
-        return res.status(500).json({ error: ERR.internal });
-      }
-      res.write(`event: error\ndata: ${JSON.stringify({ code: 'ai', message: 'error' })}\n\n`);
-      return res.end();
+      return sendSSEError('ai', 'error');
     }
   } catch (e) {
     if (auth) {
       try { await settle(auth, { success: false, requestId }); } catch {}
     }
     log.error('chat/stream error', e);
+    const code = e?.code || 'internal';
+    const message = e?.message || 'Internal error.';
+    return sendSSEError(code, message);
   }
 }
 

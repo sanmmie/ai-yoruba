@@ -36,15 +36,16 @@ const MAX_RETRIES      = 2;
 const FREE_DAILY_LIMIT = 10;
 
 const MSG = {
-  GENERIC_ERR: 'Àṣìṣe kan ṣẹlẹ̀. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.',
-  TIMEOUT:     'Ìsopọ̀ nẹ́tíwọ́ọ̀kì rọra jù. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.',
-  RATE_LIMIT:  'Ìwọ̀n ìbéèrè jù. Jọ̀wọ́ dúró díẹ̀ kí o gbìyànjú lẹ́ẹ̀kan sí i.',
-  PROCESSING:  'YorùbáGPT ń dáhùn…',
-  READY:       'Ìmúra',
-  WAIT:        'Jọ̀wọ́ dúró fún ìdáhùn tó ń bọ̀…',
-  UPGRADE:     'O ti dé ìwọ̀n ìbéèrè ọfẹ̀ rẹ fún ọjọ́ yìí. Gba Premium láti tẹsiwaju.',
-  WELCOME:     'Ẹ kú àbọ̀! Mo jẹ́ YorùbáGPT — olùrànlọ́wọ́ AI kan fún èdè Yorùbá, àṣà, àti ìtàn. Ẹ̀rọ yìí jẹ́ ìfọwọ́sowọ́pọ̀ ìwádìí àárín DeltaOS Core àti Department of Yorùbá Studies, Adekunle Ajasin University. Báwo ni mo ṣe lè ràn ọ́ lọ́wọ́ lónìí?',
-};
+    GENERIC_ERR: 'Àṣìṣe kan ṣẹlẹ̀. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.',
+    TIMEOUT:     'Ìsopọ̀ nẹ́tíwọ́ọ̀kì rọra jù. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.',
+    RATE_LIMIT:  'Ìwọ̀n ìbéèrè jù. Jọ̀wọ́ dúró díẹ̀ kí o gbìyànjú lẹ́ẹ̀kan sí i.',
+    CONSENT:     'Jọ̀wọ́ gba àwọn ìgbàníyè tí ó wúlò láti tẹ̀síwájú.',
+    PROCESSING:  'YorùbáGPT ń dáhùn…',
+    READY:       'Ìmúra',
+    WAIT:        'Jọ̀wọ́ dúró fún ìdáhùn tó ń bọ̀…',
+    UPGRADE:     'O ti dé ìwọ̀n ìbéèrè ọfẹ̀ rẹ fún ọjọ́ yìí. Gba Premium láti tẹsiwaju.',
+    WELCOME:     'Ẹ kú àbọ̀! Mo jẹ́ YorùbáGPT — olùrànlọ́wọ́ AI kan fún èdè Yorùbá, àṣà, àti ìtàn. Ẹ̀rọ yìí jẹ́ ìfọwọ́sowọ́pọ̀ ìwádìí àárín DeltaOS Core àti Department of Yorùbá Studies, Adekunle Ajasin University. Báwo ni mo ṣe lè ràn ọ́ lọ́wọ́ lónìí?',
+  };
 
 class AppError extends Error {
   constructor(msg, code) { super(msg); this.name = 'AppError'; this.code = code; }
@@ -239,32 +240,39 @@ async function handleDelete(id) {
 }
 
 // ── AI call ───────────────────────────────────────────────────
-async function callAI(message, attempt = 0) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 45000);
-  let full = '';
-  try {
-    await streamChat(
-      { sessionId: activeSessionId, message, clientRequestId: newRequestId() },
-      {
-        onDelta: (t) => { full += t || ''; },
-        onDone: () => {},
-        onError: (e) => { throw new AppError(e?.message || MSG.GENERIC_ERR, 'BACKEND_ERROR'); },
-        signal: ctrl.signal,
-      }
-    );
-    clearTimeout(timer);
-    if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
-    return full;
-  } catch (err) {
-    clearTimeout(timer);
-    if (err?.name === 'AbortError') throw new AppError(MSG.TIMEOUT, 'TIMEOUT');
-    if (err?.code === 'unauthenticated') throw new AppError('KÃ² sÃ­ Ã¬gbÃ lÃ¡Ã yÃ¨. Já»Ì€wá»Ì wá»lÃ© láº¹Ìáº¹Ì€kan sÃ­ i.', 'UNAUTHORIZED');
-    if (err?.code === 'resource-exhausted') throw new AppError(MSG.RATE_LIMIT, 'RATE_LIMITED');
-    if (err instanceof AppError) throw err;
-    throw new AppError(err?.message || MSG.GENERIC_ERR, 'STREAM_ERROR');
+  // Stream timeout: generous by design. A cold v2 instance plus slow
+  // Firestore history can exceed a 45s window; aborting then produces
+  // the "network too slow" UI. 120s covers the worst case while still
+  // surfacing a real hang. Override via VITE_AI_TIMEOUT_MS.
+  const AI_TIMEOUT_MS = parseInt(import.meta.env.VITE_AI_TIMEOUT_MS || '120000', 10);
+
+  async function callAI(message, attempt = 0) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS);
+    let full = '';
+    try {
+      await streamChat(
+        { sessionId: activeSessionId, message, clientRequestId: newRequestId() },
+        {
+          onDelta: (t) => { full += t || ''; },
+          onDone: () => {},
+          onError: (e) => { throw new AppError(e?.message || MSG.GENERIC_ERR, 'BACKEND_ERROR'); },
+          signal: ctrl.signal,
+        }
+      );
+      clearTimeout(timer);
+      if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
+      return full;
+    } catch (err) {
+      clearTimeout(timer);
+      if (err?.name === 'AbortError') throw new AppError(MSG.TIMEOUT, 'TIMEOUT');
+      if (err?.code === 'consent_required') throw new AppError(MSG.CONSENT, 'CONSENT_REQUIRED');
+      if (err?.code === 'unauthenticated') throw new AppError('KÃ² sÃ­ Ã¬gbÃ lÃ¡Ã yÃ¨. Já»Ì€wá»Ì wá»lÃ© láº¹Ìáº¹Ì€kan sÃ­ i.', 'UNAUTHORIZED');
+      if (err?.code === 'resource-exhausted') throw new AppError(MSG.RATE_LIMIT, 'RATE_LIMITED');
+      if (err instanceof AppError) throw err;
+      throw new AppError(err?.message || MSG.GENERIC_ERR, 'STREAM_ERROR');
+    }
   }
-}
 
 // ── Send message ──────────────────────────────────────────────
 async function sendMessage() {
