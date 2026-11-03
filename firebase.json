@@ -10,7 +10,10 @@
     "rewrites": [
       {
         "source": "/api/chat",
-        "destination": "https://us-central1-ai-yoruba.cloudfunctions.net/yorubaAIv2"
+        "function": {
+          "functionId": "yorubaAIv2",
+          "region": "us-central1"
+        }
       },
       {
         "source": "**",

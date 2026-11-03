@@ -19,7 +19,14 @@ const app = express();
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
-app.post('/chat/stream', async (req, res) => {
+app.post('/chat/stream', handleChatStream);
+app.post('/chat', handleChatStream);
+app.post('/api/chat', handleChatStream);
+app.post('/api/chat/stream', handleChatStream);
+app.post('/', handleChatStream);
+app.post('', handleChatStream);
+
+async function handleChatStream(req, res) {
   const requestId = req.body?.clientRequestId || `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const streamId = `stream_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   let auth = null;
@@ -121,6 +128,10 @@ app.post('/chat/stream', async (req, res) => {
         });
       }
 
+exports.yorubaAIv2 = functions
+  .runWith({ timeoutSeconds: 300, memory: '512MB', minInstances: 1, maxInstances: 20, secrets: ['ANTHROPIC_API_KEY'] })
+  .https.onRequest(app);
+
       await settle(auth, { success: true, requestId });
       res.write(`event: done\ndata: ${JSON.stringify({ messageId, remaining: auth.quota.remaining, limit: auth.quota.limit })}\n\n`);
       return res.end();
@@ -138,10 +149,8 @@ app.post('/chat/stream', async (req, res) => {
       try { await settle(auth, { success: false, requestId }); } catch {}
     }
     log.error('chat/stream error', e);
-    if (!res.headersSent) return res.status(500).json({ error: ERR.internal });
-    return res.end();
   }
-});
+}
 
 exports.yorubaAIv2 = functions
   .runWith({ timeoutSeconds: 300, memory: '512MB', minInstances: 1, maxInstances: 20, secrets: ['ANTHROPIC_API_KEY'] })
