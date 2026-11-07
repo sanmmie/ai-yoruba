@@ -26,6 +26,8 @@ const AGE_ASSURANCE_COLLECTION = 'ageAssurance';
 
 function isAgeVerified(snapshot){ if(!snapshot.exists) return false; const data = snapshot.data() || {}; if(data.status !== 'verified') return false; if(data.revokedAt) return false; if(data.expiresAt){ const exp = typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : new Date(data.expiresAt); if(exp < new Date()) return false; } return true; }
 
+void [AGE_ASSURANCE_ENABLED, AGE_ASSURANCE_PROVIDER, isAgeVerified, getAgeAssuranceRef];
+
 function getAgeAssuranceRef(db,uid){ return db.doc('users/' + uid + '/' + AGE_ASSURANCE_COLLECTION + '/status'); }
 /**
  * Returns a Firestore reference for a user's consent record.

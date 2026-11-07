@@ -23,7 +23,7 @@ async function verifyConsent(uid) {
   });
 }
 
-async function authorize(req, { sessionId: _sessionId, requestId: _requestId, streamId: _streamId } = {}) {
+async function authorize(req, { sessionId: _sessionId, requestId, streamId, payload } = {}) {
   const authHeader = req.headers.authorization || '';
   if (!authHeader.startsWith('Bearer ')) {
     const e = new Error('unauthenticated');
@@ -44,23 +44,35 @@ async function authorize(req, { sessionId: _sessionId, requestId: _requestId, st
     e.code = 'consent_required';
     throw e;
   }
-  const rl = await checkRateLimits({ uid, req, plan });
+  const rl = await checkRateLimits({ uid, req, plan, clientRequestId: requestId, payload });
   if (rl.blocked) {
-    const e = new Error(rl.code === 'quota_exceeded' ? 'quota_exceeded' : 'rate_limited');
+    const e = new Error(rl.message || (rl.code === 'quota_exceeded' ? 'quota_exceeded' : 'rate_limited'));
     e.code = rl.code;
     e.retryAfter = rl.retryAfter;
     throw e;
   }
-  return { uid, token, plan, quota: rl.quota, userRef, requestId, streamId, reservationId: rl.reservationId };
+  return {
+    uid, token, plan, quota: rl.quota, userRef,
+    requestId: requestId || rl.reservationId,
+    streamId,
+    reservationId: rl.reservationId,
+    idempotentReplay: rl.idempotent ? (rl.replay || { done: { messageId: '', remaining: rl.quota?.remaining ?? null, limit: rl.quota?.limit ?? null } }) : null,
+    recoverGenerated: !!rl.recoverGenerated,
+  };
 }
 
-async function settle(auth, { success }) {
+async function markGenerated(auth, { result, sessionId } = {}) {
+  const { markGenerated: mg } = require('../middleware/rateLimit');
+  try { if (auth?.reservationId && auth?.uid) await mg({ uid: auth.uid, reservationId: auth.reservationId, result, sessionId }); } catch (e) {}
+}
+
+async function settle(auth, { success, result, error }) {
   const { refundReservation } = require('../middleware/rateLimit');
   try {
-    if (auth?.reservationId) {
-      await refundReservation({ uid: auth.uid, reservationId: auth.reservationId, success });
+    if (auth?.reservationId && auth?.uid) {
+      await refundReservation({ uid: auth.uid, reservationId: auth.reservationId, success, result, error });
     }
   } catch (e) {}
 }
 
-module.exports = { authorize, settle, ERR, verifyConsent };
+module.exports = { authorize, settle, markGenerated, ERR, verifyConsent };

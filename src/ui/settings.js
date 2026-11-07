@@ -1,7 +1,7 @@
 ﻿'use strict';
 
 import { t } from '../i18n/i18n.js';
-import { Modal } from '../modal.js';
+import { Modal as _Modal } from '../modal.js';
 import { toast } from './toast.js';
 import { auth } from '../firebase-config.js';
 
@@ -37,7 +37,7 @@ async function call(action, data) {
 export async function openSettings({ uid: _uid, plan: _plan, consents: _consents, retention: _retention, onDeleteAccount }) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.innerHTML = 
+  overlay.innerHTML = `
     <div class="modal-card modal-card--wide" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <h2 id="settings-title"></h2>
 
@@ -68,7 +68,7 @@ export async function openSettings({ uid: _uid, plan: _plan, consents: _consents
       <div class="modal-actions">
         <button id="settings-close" class="auth-secondary-btn" type="button">Close</button>
       </div>
-    </div>;
+    </div>`;
   document.body.appendChild(overlay);
 
   const consentsEl = overlay.querySelector('#settings-consents');
@@ -104,7 +104,7 @@ export async function openSettings({ uid: _uid, plan: _plan, consents: _consents
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = yorubagpt-data-.json;
+      a.download = `yorubagpt-data-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
       toast('Downloaded');

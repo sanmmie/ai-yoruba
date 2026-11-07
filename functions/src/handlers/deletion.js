@@ -35,3 +35,18 @@ exports.deletionFunctions = functions
       }
     });
   });
+
+async function purgeUser(uid, { hardDeleteAuth = true } = {}) {
+  const db = admin.firestore();
+  await db.collection('deletedUsers').doc(uid).set({ deletedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  const sessions = await db.collection('users').doc(uid).collection('sessions').get();
+  for (const sdoc of sessions.docs) {
+    const msgs = await db.collection('users').doc(uid).collection('sessions').doc(sdoc.id).collection('messages').get();
+    for (const m of msgs.docs) await m.ref.delete();
+    await sdoc.ref.delete();
+  }
+  await db.collection('users').doc(uid).delete().catch(() => {});
+  if (hardDeleteAuth) { try { await admin.auth().deleteUser(uid); } catch (e) {} }
+}
+
+exports.purgeUser = purgeUser;

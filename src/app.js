@@ -15,7 +15,7 @@
  *  - onSnapshot real-time sidebar (no polling)
  */
 
-import { auth }  from './firebase-config.js';
+import { auth as _auth }  from './firebase-config.js';
 import { streamChat, newRequestId } from './api/stream.js';
 import {
   subscribeToSessions, teardownSubscription,
@@ -29,10 +29,8 @@ import { logger }                             from './utils/logger.js';
 import { renderMarkdown }                      from './ui/messages.js';
 
 // ── Constants ─────────────────────────────────────────────────
-const API_ENDPOINT = import.meta.env.VITE_AI_ENDPOINT ?? 'https://us-central1-ai-yoruba.cloudfunctions.net/yorubaAI';
 const MAX_MSG_LEN      = 2000;
 const DEBOUNCE_MS      = 800;
-const MAX_RETRIES      = 2;
 const FREE_DAILY_LIMIT = 10;
 
 const MSG = {
@@ -246,31 +244,39 @@ async function handleDelete(id) {
   // surfacing a real hang. Override via VITE_AI_TIMEOUT_MS.
   const AI_TIMEOUT_MS = parseInt(import.meta.env.VITE_AI_TIMEOUT_MS || '120000', 10);
 
-  async function callAI(message, attempt = 0) {
+  async function callAI(message, _attempt = 0) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), AI_TIMEOUT_MS);
     let full = '';
+    let donePayload = null;
     try {
       await streamChat(
         { sessionId: activeSessionId, message, clientRequestId: newRequestId() },
         {
           onDelta: (t) => { full += t || ''; },
-          onDone: () => {},
-          onError: (e) => { throw new AppError(e?.message || MSG.GENERIC_ERR, 'BACKEND_ERROR'); },
+          onDone: (payload) => { donePayload = payload || {}; },
+          onError: (e) => {
+            const code = e?.code || 'BACKEND_ERROR';
+            const msg = e?.message || MSG.GENERIC_ERR;
+            throw new AppError(msg, code);
+          },
           signal: ctrl.signal,
         }
       );
       clearTimeout(timer);
-      if (!full) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
-      return full;
+      // An interrupted stream without completion must not be treated as success.
+      if (!donePayload) throw new AppError(MSG.GENERIC_ERR, 'INCOMPLETE_STREAM');
+      return { text: full, done: donePayload };
     } catch (err) {
       clearTimeout(timer);
       if (err?.name === 'AbortError') throw new AppError(MSG.TIMEOUT, 'TIMEOUT');
       if (err?.code === 'consent_required') throw new AppError(MSG.CONSENT, 'CONSENT_REQUIRED');
-      if (err?.code === 'unauthenticated') throw new AppError('KÃ² sÃ­ Ã¬gbÃ lÃ¡Ã yÃ¨. Já»Ì€wá»Ì wá»lÃ© láº¹Ìáº¹Ì€kan sÃ­ i.', 'UNAUTHORIZED');
-      if (err?.code === 'resource-exhausted') throw new AppError(MSG.RATE_LIMIT, 'RATE_LIMITED');
+      if (err?.code === 'unauthenticated') throw new AppError('Kò sí ìgbàláàyè. Jọ̀wọ́ wọlé lẹ́ẹ̀kan sí i.', 'UNAUTHORIZED');
+      if (err?.code === 'quota_exceeded' || err?.code === 'rate_limited' || err?.code === 'resource-exhausted') throw new AppError(MSG.RATE_LIMIT, 'RATE_LIMITED');
+      if (err?.code === 'parse_error') throw new AppError(MSG.GENERIC_ERR, 'PARSE_ERROR');
+      if (err?.code === 'incomplete_stream') throw new AppError('Ìdáhùn náà kò pé. Jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí i.', 'INCOMPLETE_STREAM');
       if (err instanceof AppError) throw err;
-      throw new AppError(err?.message || MSG.GENERIC_ERR, 'STREAM_ERROR');
+      throw new AppError(err?.message || MSG.GENERIC_ERR, err?.code || 'STREAM_ERROR');
     }
   }
 
@@ -298,11 +304,13 @@ async function sendMessage() {
   addTypingIndicator();
 
   try {
-    const response = await callAI(message);
+    const result = await callAI(message);
+    const response = typeof result === 'string' ? result : (result?.text || '');
     removeTypingIndicator();
+    if (!response && !result?.done) throw new AppError(MSG.GENERIC_ERR, 'NO_RESPONSE');
     const rts = fmtTime();
-    addAssistantMessage(response, rts);
-    conversationHistory.push({ role:'assistant', content:response, timestamp:rts });
+    addAssistantMessage(response || '…', rts);
+    conversationHistory.push({ role:'assistant', content:response, timestamp:rts, messageId: result?.done?.messageId || null });
     bumpDaily();
 
     if (activeSessionId && currentUser) {
