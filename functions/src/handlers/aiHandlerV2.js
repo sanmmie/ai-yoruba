@@ -209,6 +209,7 @@ async function handleChatStream(req, res) {
         const sidRef = db.collection('users').doc(uid).collection('sessions').doc(sessionId);
         const userMsgId = auth.reservationId ? `${auth.reservationId}__user` : sidRef.collection('messages').doc().id;
         const asstMsgId = auth.reservationId ? `${auth.reservationId}__assistant` : sidRef.collection('messages').doc().id;
+      try {
         await db.runTransaction(async (tx) => {
           const sidSnap = await tx.get(sidRef);
           const seq = (sidSnap.exists ? (sidSnap.data().seq ?? 0) : 0) + 1;
@@ -230,6 +231,11 @@ async function handleChatStream(req, res) {
           }, { merge: true });
           messageId = midAsst.id;
         });
+      } catch (persistErr) {
+        log.error('message persistence failed', persistErr, { uid, requestId });
+        await settleOnce(false, null, { code: 'firestore_persistence_error', message: 'Message persistence failed.' });
+        return sendSSEError('firestore_persistence_error', 'Message persistence failed.');
+      }
       }
 
       if (cancelled) { await settleOnce(false); if (!res.writableEnded) try { res.end(); } catch {} return; }
@@ -247,8 +253,8 @@ async function handleChatStream(req, res) {
         return;
       }
       log.error('Anthropic stream failed', err, { uid, requestId, cancelled, reason: cancelReason });
-      await settleOnce(false, null, { code: aborted ? 'stream_aborted' : 'ai', message: aborted ? 'Stream was interrupted.' : 'error' });
-      return sendSSEError(aborted ? 'stream_aborted' : 'ai', aborted ? 'Stream was interrupted.' : 'error');
+      await settleOnce(false, null, { code: aborted ? 'stream_aborted' : 'provider_error', message: aborted ? 'Stream was interrupted.' : 'Generation failed.' });
+      return sendSSEError(aborted ? 'stream_aborted' : 'provider_error', aborted ? 'Stream was interrupted.' : 'Generation failed.');
     }
   } catch (e) {
     await settleOnce(false);

@@ -14,8 +14,8 @@
 
 import { initializeApp, getApps }                          from 'firebase/app';
 import { getAuth, connectAuthEmulator }                     from 'firebase/auth';
-import { getFirestore, connectFirestoreEmulator,
-         enableIndexedDbPersistence }                       from 'firebase/firestore';
+import { getFirestore, initializeFirestore, connectFirestoreEmulator,
+         persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator }           from 'firebase/functions';
 import { getAnalytics, isSupported }                        from 'firebase/analytics';
 
@@ -42,7 +42,16 @@ if (missingConfig.length > 0) {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const auth      = getAuth(app);
-export const db        = getFirestore(app);
+let db;
+try {
+  db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+} catch (e) {
+  db = getFirestore(app);
+}
 export const functions = getFunctions(app, 'us-central1');
 
 export let analytics = null;
@@ -66,9 +75,6 @@ if (import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === 'true') {
   console.info('[Firebase] Emulators connected');
 }
 
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') console.warn('[Firebase] Persistence: multiple tabs');
-  else if (err.code === 'unimplemented')  console.warn('[Firebase] Persistence: not supported');
-});
+export { db };
 
 export default app;
